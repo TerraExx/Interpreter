@@ -1,0 +1,4 @@
+program : declarations
+declarations : VARIABLES LCURLY variable_declaration* RCULRY 
+variable_declaration : type_spec ID (COMMA ID)* SEMICOL
+type_spec : INT8 | INT16 | INT32 | INT8 | INT16 | INT32 | FLOAT

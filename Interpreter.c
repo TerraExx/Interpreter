@@ -15,10 +15,25 @@ int main(void) {
 	lexer Lexer;
 	token Token;
 
-	uint8_t	text[20] = "612 + 8";
+	uint8_t	text[252] = "variables + { uint16 Idx; }";
 
 	Lexer_Init(&Lexer, text);
-	Token = Lexer.fcnGetNextToken(&Lexer);
+
+	while(Lexer.current_Char != NULL)
+	{
+	    Token = Lexer.fcnGetNextToken(&Lexer);
+	    if(Token.type == INTEGER_CONST)
+	    {
+	        printf("Token: %d\n", Token.value.integer_const);
+	        fflush(stdout);
+	    }
+	    else
+	    {
+	        printf("Token: %s\n", Token.value.string);
+	fflush(stdout);
+	    }
+	}
+
 
 	return EXIT_SUCCESS;
 }
