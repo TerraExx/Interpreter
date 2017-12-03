@@ -1,4 +1,34 @@
-program : declarations
+program : declarations compound_statement_main
+
 declarations : VARIABLES LCURLY variable_declaration* RCULRY 
+
 variable_declaration : type_spec ID (COMMA ID)* SEMICOL
-type_spec : INT8 | INT16 | INT32 | INT8 | INT16 | INT32 | FLOAT
+
+type_spec :   INT8 
+			| INT16 
+			| INT32 
+			| INT8 
+			| INT16 
+			| INT32 
+			| FLOAT
+
+compound_statement_main : MAIN  LCURLY statement_list RCURLY
+
+statement_list : statement | statement SEMI statement_list 
+
+statement : assignment_statement | empty
+
+assignment_statement : ID ASSIGN expr
+
+expr : term ((PLUS | MINUS) term)*
+
+term : factor ((MUL | INTEGER_DIV | FLOAT_DIV) factor)*
+
+factor :   PLUS factor
+         | MINUS factor
+         | INTEGER_CONST
+         | REAL_CONST
+         | LPAREN expr RPAREN
+         | ID
+
+empty : 

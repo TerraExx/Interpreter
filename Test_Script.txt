@@ -1,0 +1,14 @@
+variables
+{
+	uint8	Test_1;
+	uint16	Test_2;
+	uint32	Test_3;
+}
+
+main
+{
+	Test_1 = 1;
+	Test_2 = 1;
+	
+	Test_3 = Test_1 + Test_2;
+}

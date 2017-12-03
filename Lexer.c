@@ -6,6 +6,7 @@
 uint8_t KeyWordString[KEY_WORD_NUM][KEY_WORD_MAX_LENGHT] =
 {
         "variables",
+		"main",
         "int8",
         "int16",
         "int32",
@@ -22,58 +23,26 @@ void Lexer_InitKeywords(void)
     for(Idx = 0; Idx < KEY_WORD_NUM; Idx++)
     {
         strcpy((char*)KeyWordArray[Idx].string,(const char*)KeyWordString[Idx]);
-        switch(Idx)
-        {
-        case 0:
-            KeyWordArray[Idx].keyword_token.type = VARIABLES;
-            break;
-        case 1:
-            KeyWordArray[Idx].keyword_token.type = INT8;
-            break;
-        case 2:
-            KeyWordArray[Idx].keyword_token.type = INT16;
-            break;
-        case 3:
-            KeyWordArray[Idx].keyword_token.type = INT32;
-            break;
-        case 4:
-            KeyWordArray[Idx].keyword_token.type = UINT8;
-            break;
-        case 5:
-            KeyWordArray[Idx].keyword_token.type = UINT16;
-            break;
-        case 6:
-            KeyWordArray[Idx].keyword_token.type = UINT32;
-            break;
-        case 7:
-            KeyWordArray[Idx].keyword_token.type = FLOAT;
-            break;
-        }
+        KeyWordArray[Idx].keyword_token.type = (e_lexer_token_type) Idx;
         strcpy((char*)KeyWordArray[Idx].keyword_token.value.string,(const char*)KeyWordString[Idx]);
     }
 }
 
-void Lexer_Init(lexer* Lexer, uint8_t* text)
+void Lexer_Init(s_lexer_lexer* Lexer, uint8_t* text)
 {
 	Lexer->text = text;
-	Lexer->text_lenght = strlen((const char*)text);
 
 	Lexer->current_Pos = 0;
 	Lexer->current_Char = text;
 
-	Lexer->fcnGetNextToken = Lexer_GetNextToken;
-
 	Lexer_InitKeywords();
 }
 
-void Lexer_Advance(void* lexerPtr)
+void Lexer_Advance(s_lexer_lexer* Lexer)
 {
-    lexer* Lexer;
-    Lexer = (lexer*)lexerPtr;
-
     Lexer->current_Pos++;
 
-    if(Lexer->current_Pos == Lexer->text_lenght)
+    if(Lexer->current_Pos == strlen((const char*)Lexer->text))
     {
         Lexer->current_Char = NULL;
     }
@@ -83,12 +52,9 @@ void Lexer_Advance(void* lexerPtr)
     }
 }
 
-token Lexer_Number(void* lexerPtr)
+s_lexer_token Lexer_Number(s_lexer_lexer* Lexer)
 {
-    token   Token;
-
-    lexer* Lexer;
-    Lexer = (lexer*)lexerPtr;
+    s_lexer_token   Token;
 
     uint8_t     Number[20];
     uint8_t*    Number_Ptr;
@@ -108,23 +74,19 @@ token Lexer_Number(void* lexerPtr)
     return Token;
 }
 
-token Lexer_Id(void* lexerPtr)
+s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
 {
-    token   Token;
-
-    lexer* Lexer;
+    s_lexer_token   Token;
 
     uint8_t     String[32];
     uint8_t*    String_Ptr;
 
     uint8_t     Idx;
 
-    Lexer = (lexer*)lexerPtr;
-
     String_Ptr = String;
     memset((void*)String,0,sizeof(String));
 
-    while((Lexer->current_Char != NULL) && isalnum(*Lexer->current_Char))
+    while((Lexer->current_Char != NULL) && (isalnum(*Lexer->current_Char) || *Lexer->current_Char == '_'))
     {
         *(String_Ptr++) = *Lexer->current_Char;
         Lexer_Advance(Lexer);
@@ -152,12 +114,9 @@ token Lexer_Id(void* lexerPtr)
     return Token;
 }
 
-token Lexer_GetNextToken(void* lexerPtr)
+s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
 {
-	token	Token;
-
-	lexer* Lexer;
-	Lexer = (lexer*)lexerPtr;
+	s_lexer_token	Token;
 
 	while(Lexer->current_Char != NULL)
 	{
@@ -167,15 +126,13 @@ token Lexer_GetNextToken(void* lexerPtr)
 	        continue;
 	    }
 
-
-
 	    if(isdigit(*Lexer->current_Char))
 	    {
 	        Token = Lexer_Number(Lexer);
 	        break;
 	    }
 
-	    if(isalpha(*Lexer->current_Char))
+	    if(isalpha(*Lexer->current_Char) || *Lexer->current_Char == '_')
 	    {
 	        Token = Lexer_Id(Lexer);
 	        break;
@@ -184,7 +141,7 @@ token Lexer_GetNextToken(void* lexerPtr)
 	    if(*Lexer->current_Char == '=')
 	    {
 	        Token.type = ASSIGN;
-	        strcpy(Token.value.string, (const char*)'=');
+	        strcpy(Token.value.string, (const char*)"=");
             Lexer_Advance(Lexer);
             break;
 	    }
@@ -228,6 +185,10 @@ token Lexer_GetNextToken(void* lexerPtr)
             Lexer_Advance(Lexer);
             break;
         }
+
+        printf("Could not read token.\n");
+        exit(1);
+
 	}
 
 	return Token;
