@@ -40,6 +40,8 @@ s_ast_type_spec* Parser_Type_Spec(s_parser_parser* Parser)
 
 	Type_SpecNode = (s_ast_type_spec*) malloc(sizeof(s_ast_type_spec));
 
+    Type_SpecNode->token = Parser->current_token;
+
 	if(Parser->current_token.type == UINT8)
 	{
 		Parser_Eat(Parser, UINT8);
@@ -74,8 +76,6 @@ s_ast_type_spec* Parser_Type_Spec(s_parser_parser* Parser)
 		exit(1);
 	}
 
-	Type_SpecNode->token = Parser->current_token;
-
 	return Type_SpecNode;
 }
 
@@ -85,6 +85,8 @@ s_ast_factor* Parser_Factor(s_parser_parser* Parser)
 	s_ast_factor*	FactorNode;
 
 	FactorNode = (s_ast_factor*) malloc(sizeof(s_ast_factor));
+
+    FactorNode->token = Parser->current_token;
 
 	if(Parser->current_token.type == ID)
 	{
@@ -96,65 +98,128 @@ s_ast_factor* Parser_Factor(s_parser_parser* Parser)
 		exit(1);
 	}
 
-	FactorNode->token = Parser->current_token;
-
 	return FactorNode;
 }
 
 s_ast_variable_declaration* Parser_Variable_Declaration(s_parser_parser* Parser)
 {
 	/*   variable_declaration : type_spec ID (COMMA ID)* SEMICOL    */
-	s_ast_variable_declaration* DeclarationNode;
+	s_ast_variable_declaration* VariableDeclarationNode;
+	s_ast_factor_link**         TempFactorLinkPtr;
 
-	DeclarationNode = (s_ast_variable_declaration*) malloc(sizeof(s_ast_variable_declaration));
+	VariableDeclarationNode = (s_ast_variable_declaration*) malloc(sizeof(s_ast_variable_declaration));
 
-	DeclarationNode->type_spec = Parser_Type_Spec(Parser);
-	DeclarationNode->id = Parser_Factor(Parser);
+	VariableDeclarationNode->type_spec = Parser_Type_Spec(Parser);
+
+	VariableDeclarationNode->factor_head_link = NULL;
+
+	TempFactorLinkPtr = &VariableDeclarationNode->factor_head_link;
+
+	/* Parse the name of the first variable */
+	(*TempFactorLinkPtr) = (s_ast_factor_link*) malloc(sizeof(s_ast_factor_link));
+	(*TempFactorLinkPtr)->factor = Parser_Factor(Parser);
+
+	(*TempFactorLinkPtr)->next_factor_link = NULL;
+	TempFactorLinkPtr = &(*TempFactorLinkPtr)->next_factor_link;
+
+	/* Continue parsing variable names */
+	while(Parser->current_token.type == COMMA)
+	{
+        Parser_Eat(Parser, COMMA);
+
+        (*TempFactorLinkPtr) = (s_ast_factor_link*) malloc(sizeof(s_ast_factor_link));
+        (*TempFactorLinkPtr)->factor = Parser_Factor(Parser);
+
+        (*TempFactorLinkPtr)->next_factor_link = NULL;
+        TempFactorLinkPtr = &(*TempFactorLinkPtr)->next_factor_link;
+	}
 
 	Parser_Eat(Parser, SEMICOL);
 
-	return DeclarationNode;
+	return VariableDeclarationNode;
 }
 
-s_ast_variable_declaration_link* Parser_Declarations(s_parser_parser* Parser)
+s_ast_declarations* Parser_Declarations(s_parser_parser* Parser)
 {
 	/*   declarations : VARIABLES LCURLY variable_declaration* RCULRY    */
 
-	s_ast_variable_declaration_link* FirstDeclarationNode;
-	s_ast_variable_declaration_link* TempPtr;
+    s_ast_declarations* DeclarationsNode;
+	s_ast_variable_declaration_link** TempPtr;
 
-	FirstDeclarationNode = (s_ast_variable_declaration_link*) malloc(sizeof(s_ast_variable_declaration_link));
-	FirstDeclarationNode->variable_declaration = NULL;
-	FirstDeclarationNode->next_variable_declaration_link = NULL;
+	DeclarationsNode = (s_ast_declarations*) malloc(sizeof(s_ast_declarations));
+	DeclarationsNode->variable_declaration_head_link = NULL;
 
 	Parser_Eat(Parser, VARIABLES);
 	Parser_Eat(Parser, LCURLY);
 
-	TempPtr = FirstDeclarationNode;
+	TempPtr = &DeclarationsNode->variable_declaration_head_link;
 	while( (Parser->current_token.type >= INT8) && (Parser->current_token.type <= FLOAT) )
 	{
-		TempPtr->variable_declaration = Parser_Variable_Declaration(Parser);
+	    (*TempPtr) = (s_ast_variable_declaration_link*) malloc(sizeof(s_ast_variable_declaration_link));
 
-		TempPtr->next_variable_declaration_link = (s_ast_variable_declaration_link*) malloc(sizeof(s_ast_variable_declaration_link));
-		TempPtr = TempPtr->next_variable_declaration_link;
+	    (*TempPtr)->variable_declaration = Parser_Variable_Declaration(Parser);
 
-		TempPtr->variable_declaration = NULL;
-		TempPtr->next_variable_declaration_link = NULL;
+	    (*TempPtr)->next_variable_declaration_link = NULL;
+		TempPtr = &(*TempPtr)->next_variable_declaration_link;
 	}
 
 	Parser_Eat(Parser, RCURLY);
 
-	return FirstDeclarationNode;
+	return DeclarationsNode;
 }
 
-s_ast_program Parser_Parse(s_parser_parser* Parser)
+s_ast_statement_list* Parser_Statement_List(s_parser_parser* Parser)
+{
+    /*   statement_list : statement | statement SEMI statement_list   */
+
+    s_ast_statement_list*   StatementListNode;
+    s_ast_statement_list**  TempStatementListNodePtr;
+
+    TempStatementListNodePtr = &StatementListNode;
+
+    (*TempStatementListNodePtr) = NULL;
+
+    while(Parser->current_token.type != RCURLY)
+    {
+        (*TempStatementListNodePtr)->statement_list = (s_ast_statement_list*) malloc(sizeof(s_ast_statement_list));
+
+//        (*TempStatementListNodePtr)->statement = Parser_Statement( Parser);
+
+        TempStatementListNodePtr = (*TempStatementListNodePtr)->statement_list->statement_list;
+
+        (*TempStatementListNodePtr) = NULL;
+    }
+
+    return StatementListNode;
+}
+
+s_ast_compound_statement_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
+{
+    /*   compound_statement_main : MAIN  LCURLY statement_list RCURLY   */
+
+    s_ast_compound_statement_main* CompoundStatementMainNode;
+
+    CompoundStatementMainNode = (s_ast_compound_statement_main*) malloc(sizeof(s_ast_compound_statement_main));
+
+    Parser_Eat(Parser, MAIN);
+    Parser_Eat(Parser, LCURLY);
+
+    CompoundStatementMainNode->statement_list = Parser_Statement_List(Parser);
+
+    Parser_Eat(Parser, RCURLY);
+
+    return CompoundStatementMainNode;
+}
+
+s_ast_program* Parser_Parse(s_parser_parser* Parser)
 {
 	/*   program : declarations compound_statement_main   */
 
-	s_ast_program ProgramNode;
+	s_ast_program* ProgramNode;
 
-	ProgramNode.declarations = Parser_Declarations(Parser);
+	ProgramNode = (s_ast_program*) malloc(sizeof(s_ast_program));
 
+	ProgramNode->declarations = Parser_Declarations(Parser);
 
 	return ProgramNode;
 }

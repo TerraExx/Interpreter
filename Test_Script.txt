@@ -1,8 +1,8 @@
 variables
 {
-	uint8	Test_1;
-	uint16	Test_2;
-	uint32	Test_3;
+	uint8	Test_1, Test_4, Test_5;
+	uint16	Test_2, Test_6;
+	uint32	Test_3, Test_7, Test_8;
 }
 
 main

@@ -186,6 +186,14 @@ s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
             break;
         }
 
+        if(*Lexer->current_Char == ',')
+        {
+            Token.type = COMMA;
+            strcpy(Token.value.string, (const char*)",");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
         printf("Could not read token.\n");
         exit(1);
 

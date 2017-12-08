@@ -9,11 +9,15 @@
  */
 #include "Common.h"
 #include "Lexer.h"
+#include "AST.h"
+#include "Parser.h"
 
 int main(void) {
 
-	s_lexer_lexer Lexer;
-	s_lexer_token Token;
+	s_lexer_lexer   Lexer;
+	s_parser_parser Parser;
+	s_ast_program*  ProgramNode;
+
 
 	FILE*   FilePtr;
 	size_t	FileSize;
@@ -21,9 +25,7 @@ int main(void) {
 	uint8_t*	Text;
 	size_t	ReadSize;
 
-	uint16_t	TokenCount = 0;
-
-	FilePtr = fopen("C:\\Users\\Josip\\eclipse-workspace\\Interpreter\\src\\Interpreter\\Test_Script.txt", "r");
+	FilePtr = fopen("C:\\Users\\posavi\\eclipse-workspace\\Interpreter\\src\\Test_Script.txt", "r");
 
 	if(FilePtr == NULL)
 	{
@@ -46,28 +48,11 @@ int main(void) {
 	}
 
 	Lexer_Init(&Lexer, Text);
+	Parser_Init(&Parser, &Lexer);
 
-	while(Lexer.current_Char != NULL)
-	{
-		TokenCount++;
-
-		Token = Lexer_GetNextToken(&Lexer);
-	    if(Token.type == INTEGER_CONST)
-	    {
-	        printf("Token: %d\n", Token.value.integer_const);
-	        fflush(stdout);
-	    }
-	    else
-	    {
-	        printf("Token: %s\n", Token.value.string);
-	        fflush(stdout);
-	    }
-	}
+	ProgramNode = Parser_Parse(&Parser);
 
 	free((void*)Text);
-
-	printf("Tken Count: %d\n",TokenCount);
-	fflush(stdout);
 
 	return EXIT_SUCCESS;
 }

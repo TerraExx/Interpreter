@@ -31,6 +31,7 @@ typedef enum
 	LCURLY,
 	RCURLY,
 	ASSIGN,
+	COMMA,
 	SEMICOL,
 	PLUS,
 	MINUS,
