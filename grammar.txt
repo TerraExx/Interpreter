@@ -2,7 +2,7 @@ program : declarations compound_statement_main
 
 declarations : VARIABLES LCURLY variable_declaration* RCULRY 
 
-variable_declaration : type_spec ID (COMMA ID)* SEMICOL
+variable_declaration : type_spec variable (COMMA variable)* SEMICOL
 
 type_spec :   INT8 
 			| INT16 
@@ -29,6 +29,8 @@ factor :   PLUS factor
          | INTEGER_CONST
          | REAL_CONST
          | LPAREN expr RPAREN
-         | ID
+	     | variable
+
+variable : ID
 
 empty : 
