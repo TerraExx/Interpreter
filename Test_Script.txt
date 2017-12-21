@@ -7,8 +7,5 @@ variables
 
 main
 {
-	Test_1 = 1;
-	Test_2 = 1;
-	
-	Test_3 = Test_1 + Test_2;
+
 }

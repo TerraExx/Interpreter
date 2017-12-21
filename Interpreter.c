@@ -25,7 +25,7 @@ int main(void) {
 	uint8_t*	Text;
 	size_t	ReadSize;
 
-	FilePtr = fopen("C:\\Users\\posavi\\eclipse-workspace\\Interpreter\\src\\Test_Script.txt", "r");
+	FilePtr = fopen("C:\\Users\\Josip\\eclipse-workspace\\Interpreter\\src\\Interpreter\\Test_Script.txt", "r");
 
 	if(FilePtr == NULL)
 	{
