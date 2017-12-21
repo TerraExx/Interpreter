@@ -48,9 +48,9 @@ int main(void) {
 	}
 
 	Lexer_Init(&Lexer, Text);
-//	Parser_Init(&Parser, &Lexer);
+	Parser_Init(&Parser, &Lexer);
 
-//	ProgramNode = Parser_Parse(&Parser);
+	ProgramNode = Parser_Parse(&Parser);
 
 	free((void*)Text);
 
