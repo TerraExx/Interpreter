@@ -28,6 +28,8 @@ typedef enum
 	INTEGER_CONST,
 	REAL_CONST,
 	ID,
+	LPAREN,
+	RPAREN,
 	LCURLY,
 	RCURLY,
 	ASSIGN,
@@ -35,11 +37,14 @@ typedef enum
 	SEMICOL,
 	PLUS,
 	MINUS,
+	MUL,
+	DIV,
 	TOKEN_TYPE_NUM
 } e_lexer_token_type;
 
 typedef struct
 {
+    uint16_t  line;
 	e_lexer_token_type	type;
 	union
 	{

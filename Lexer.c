@@ -1,4 +1,4 @@
-#include "Common.h"
+#include "System.h"
 #include "Lexer.h"
 
 #include <ctype.h>
@@ -116,10 +116,19 @@ s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
 
 s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
 {
-	s_lexer_token	Token;
+    static  uint16_t    CurrentLine = 1;
+
+	s_lexer_token	    Token;
 
 	while(Lexer->current_Char != NULL)
 	{
+        if(*Lexer->current_Char == '\n')
+        {
+            CurrentLine++;
+            Lexer_Advance(Lexer);
+            continue;
+        }
+
 	    if(isspace(*Lexer->current_Char))
 	    {
 	        Lexer_Advance(Lexer);
@@ -194,10 +203,45 @@ s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
             break;
         }
 
+        if(*Lexer->current_Char == '*')
+        {
+            Token.type = MUL;
+            strcpy(Token.value.string, (const char*)"*");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '/')
+        {
+            Token.type = DIV;
+            strcpy(Token.value.string, (const char*)"/");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '(')
+        {
+            Token.type = LPAREN;
+            strcpy(Token.value.string, (const char*)"(");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == ')')
+        {
+            Token.type = RPAREN;
+            strcpy(Token.value.string, (const char*)")");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
         printf("Could not read token.\n");
         exit(1);
 
 	}
+
+	/* Record Token Line */
+	Token.line = CurrentLine;
 
 	return Token;
 }

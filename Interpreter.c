@@ -7,9 +7,10 @@
  Description : Hello World in C, Ansi-style
  ============================================================================
  */
-#include "Common.h"
+#include "System.h"
 #include "Lexer.h"
 #include "AST.h"
+#include "Debug_Walker.h"
 #include "Parser.h"
 
 int main(void) {
@@ -51,6 +52,8 @@ int main(void) {
 	Parser_Init(&Parser, &Lexer);
 
 	ProgramNode = Parser_Parse(&Parser);
+
+	Debug_Walker_Walkthrought(ProgramNode);
 
 	free((void*)Text);
 

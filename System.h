@@ -14,5 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
+void System_Print(const char *format, ...);
 
 #endif /* COMMON_H_ */
