@@ -170,12 +170,12 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Statistics.VerLine.Idx++;
 
         /* Global Variable Declaration Visit */
-        TempNodePtr = (void*)&((s_ast_program*)NodePtr)->var_decl_link;
-        while( TempNodePtr != NULL && ((struct var_decl_link*)TempNodePtr)->var_declaration != NULL )
+        TempNodePtr = (void*)&((s_ast_program*)NodePtr)->global_var_decl_link;
+        while( TempNodePtr != NULL && ((struct global_var_decl_link*)TempNodePtr)->var_declaration != NULL )
         {
-            Debug_Walker_Visit( ((struct var_decl_link*)TempNodePtr)->var_declaration );
+            Debug_Walker_Visit( ((struct global_var_decl_link*)TempNodePtr)->var_declaration );
 
-            TempNodePtr = (void*)((struct var_decl_link*)TempNodePtr)->next_var_decl_link;
+            TempNodePtr = (void*)((struct global_var_decl_link*)TempNodePtr)->next_var_decl_link;
         }
 
         /* Compound Statement Visit */
@@ -219,6 +219,15 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
         Debug_Walker_Statistics.VerLine.Idx++;
 
+        /* Main Variable Declaration Visit */
+        TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->main_var_decl_link;
+        while( TempNodePtr != NULL && ((struct main_var_decl_link*)TempNodePtr)->var_declaration != NULL )
+        {
+            Debug_Walker_Visit( ((struct main_var_decl_link*)TempNodePtr)->var_declaration );
+
+            TempNodePtr = (void*)((struct main_var_decl_link*)TempNodePtr)->next_var_decl_link;
+        }
+
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->statement_link;
         while( TempNodePtr != NULL && ((struct statement_link*)TempNodePtr)->statement != NULL )
@@ -254,6 +263,15 @@ void Debug_Walker_Visit( void* NodePtr )
             Debug_Walker_Visit( ((struct parameter_link*)TempNodePtr)->parameter );
 
             TempNodePtr = (void*)((struct parameter_link*)TempNodePtr)->next_parameter_link;
+        }
+
+        /* Compound Variable Declaration Visit */
+        TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->cmp_var_decl_link;
+        while( TempNodePtr != NULL && ((struct cmp_var_decl_link*)TempNodePtr)->var_declaration != NULL )
+        {
+            Debug_Walker_Visit( ((struct cmp_var_decl_link*)TempNodePtr)->var_declaration );
+
+            TempNodePtr = (void*)((struct cmp_var_decl_link*)TempNodePtr)->next_var_decl_link;
         }
 
         /* Statement Node Visit */

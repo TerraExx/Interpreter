@@ -4,13 +4,13 @@ declarations : VARIABLES LCURLY variable_declaration* RCULRY
 
 variable_declaration : type_spec variable (COMMA variable)* SEMICOL
 
-compound_statement : type_spec variable LPAREN parameter_list RPAREN LCURLY statement_list RCURLY
+compound_statement : type_spec variable LPAREN parameter_list RPAREN LCURLY ((variable_declaration)*)? statement_list RCURLY
 
 parameter_list : parameter | (parameter COMMA parameter_list)*
 
 parameter : type_spec variable
 
-compound_statement_main : MAIN  LCURLY statement_list RCURLY
+compound_statement_main : MAIN  LCURLY ((variable_declaration)*)? statement_list RCURLY
 
 statement_list : statement | statement SEMI statement_list 
 

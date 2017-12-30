@@ -7,17 +7,25 @@ variables
 
 uint8 foo( float Par1, uint32 Par2)
 {
+	uint16 FooVar;
+
 	Test_1 = 6;
 	Test_3 = 5;
 }
 
 float bar(  )
 {
+	float BarVar;
+
 	Test_8 = Test_6 + Test_3;
 }
 
 main
 {
+	float Proba;
+	int16 Ovo, Bi, Trebalo;
+	uint8 Raditi;
+
 	Test_1 = 5 * 3 + - 2 - 5 * Test_8;
 	Test_2 = 7 / 3;
 }

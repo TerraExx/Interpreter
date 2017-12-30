@@ -258,87 +258,6 @@ void* Parser_Expression(s_parser_parser* Parser)
     return Expression;
 }
 
-void* Parser_Statement(s_parser_parser* Parser)
-{
-    void*   Statement;
-
-    /* Init */
-    Statement = NULL;
-
-    /* Check statement type */
-    if(Parser->current_token.type == ID)
-    {
-        /* Assigment Statement */
-        Statement = malloc(sizeof(s_ast_assignment));
-
-        /* Init */
-        ((s_ast_assignment*)Statement)->info.type = ASSIGNMENT;
-
-        /* Parse variable (left operand) */
-        ((s_ast_assignment*)Statement)->variable = Parser_Variable( Parser );
-
-        Parser_Eat( Parser, ASSIGN );
-
-        /* Parse right side (expression) */
-        ((s_ast_assignment*)Statement)->expression = Parser_Expression( Parser );
-
-        Parser_Eat( Parser, SEMICOL );
-    }
-
-    return Statement;
-}
-
-s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
-{
-	s_ast_compound_main* 		 CompoundMainNode;
-	struct statement_link*       StatementLinkPtr;
-	struct statement_link*       TempPtr;
-
-	CompoundMainNode = (s_ast_compound_main*) malloc(sizeof(s_ast_compound_main));
-
-	/* Init */
-	CompoundMainNode->info.type = COMPOUND_MAIN;
-
-	CompoundMainNode->statement_link.statement = NULL;
-	CompoundMainNode->statement_link.next_statement_link = NULL;
-	CompoundMainNode->statement_link.perv_statement_link = NULL;
-
-    Parser_Eat(Parser, MAIN);
-    Parser_Eat(Parser, LCURLY);
-
-    StatementLinkPtr = &CompoundMainNode->statement_link;
-
-    while(Parser->current_token.type != RCURLY)
-    {
-    	StatementLinkPtr->statement = Parser_Statement( Parser );
-
-    	StatementLinkPtr->next_statement_link = (struct statement_link*) malloc(sizeof(struct statement_link));
-
-        /* Init new link */
-        TempPtr = StatementLinkPtr;
-
-        StatementLinkPtr = StatementLinkPtr->next_statement_link;
-
-        StatementLinkPtr->statement = NULL;
-        StatementLinkPtr->next_statement_link = NULL;
-        StatementLinkPtr->perv_statement_link = TempPtr;
-    }
-
-    /* Free/DeInit the last allocated link */
-    if(StatementLinkPtr->perv_statement_link != NULL)
-    {
-        TempPtr = StatementLinkPtr->perv_statement_link;
-        TempPtr->next_statement_link = NULL;
-        free(StatementLinkPtr);
-    }
-
-    Parser_Eat(Parser, RCURLY);
-
-    return CompoundMainNode;
-}
-
-/********************************   VARIABLE DECLARATION START   ********************************/
-
 s_ast_var_declaration* Parser_Declaration(s_parser_parser* Parser)
 {
   s_ast_var_declaration* DeclarationNode;
@@ -398,6 +317,124 @@ s_ast_var_declaration* Parser_Declaration(s_parser_parser* Parser)
   return DeclarationNode;
 }
 
+void* Parser_Statement(s_parser_parser* Parser)
+{
+    void*   Statement;
+
+    /* Init */
+    Statement = NULL;
+
+    /* Check statement type */
+    if(Parser->current_token.type == ID)
+    {
+        /* Assigment Statement */
+        Statement = malloc(sizeof(s_ast_assignment));
+
+        /* Init */
+        ((s_ast_assignment*)Statement)->info.type = ASSIGNMENT;
+
+        /* Parse variable (left operand) */
+        ((s_ast_assignment*)Statement)->variable = Parser_Variable( Parser );
+
+        Parser_Eat( Parser, ASSIGN );
+
+        /* Parse right side (expression) */
+        ((s_ast_assignment*)Statement)->expression = Parser_Expression( Parser );
+
+        Parser_Eat( Parser, SEMICOL );
+    }
+
+    return Statement;
+}
+
+s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
+{
+	s_ast_compound_main* 		 CompoundMainNode;
+
+    struct main_var_decl_link*   VarDeclLinkPtr;
+    struct main_var_decl_link*   TempVarDeclPtr;
+
+	struct statement_link*       StatementLinkPtr;
+	struct statement_link*       TempPtr;
+
+	CompoundMainNode = (s_ast_compound_main*) malloc(sizeof(s_ast_compound_main));
+
+	/* Init */
+	CompoundMainNode->info.type = COMPOUND_MAIN;
+
+	CompoundMainNode->main_var_decl_link.var_declaration = NULL;
+	CompoundMainNode->main_var_decl_link.next_var_decl_link = NULL;
+	CompoundMainNode->main_var_decl_link.perv_var_decl_link = NULL;
+
+	CompoundMainNode->statement_link.statement = NULL;
+	CompoundMainNode->statement_link.next_statement_link = NULL;
+	CompoundMainNode->statement_link.perv_statement_link = NULL;
+
+    Parser_Eat(Parser, MAIN);
+    Parser_Eat(Parser, LCURLY);
+
+    StatementLinkPtr = &CompoundMainNode->statement_link;
+
+    /* Parse main variable declarations */
+    if(Parser->current_token.type >= INT8 && Parser->current_token.type <= FLOAT)
+    {
+        VarDeclLinkPtr = &CompoundMainNode->main_var_decl_link;
+
+        while(Parser->current_token.type >= INT8 && Parser->current_token.type <= FLOAT)
+        {
+            VarDeclLinkPtr->var_declaration = Parser_Declaration( Parser );
+
+            VarDeclLinkPtr->next_var_decl_link = (struct main_var_decl_link*) malloc(sizeof(struct main_var_decl_link));
+
+            /* Init new link */
+            TempVarDeclPtr = VarDeclLinkPtr;
+
+            VarDeclLinkPtr = VarDeclLinkPtr->next_var_decl_link;
+
+            VarDeclLinkPtr->var_declaration = NULL;
+            VarDeclLinkPtr->next_var_decl_link = NULL;
+            VarDeclLinkPtr->perv_var_decl_link = TempVarDeclPtr;
+        }
+
+        /* Free/DeInit the last allocated link */
+        if(VarDeclLinkPtr->perv_var_decl_link != NULL)
+        {
+            TempVarDeclPtr = VarDeclLinkPtr->perv_var_decl_link;
+            TempVarDeclPtr->next_var_decl_link = NULL;
+            free(VarDeclLinkPtr);
+        }
+    }
+
+    /* Parse Statements */
+    while(Parser->current_token.type != RCURLY)
+    {
+    	StatementLinkPtr->statement = Parser_Statement( Parser );
+
+    	StatementLinkPtr->next_statement_link = (struct statement_link*) malloc(sizeof(struct statement_link));
+
+        /* Init new link */
+        TempPtr = StatementLinkPtr;
+
+        StatementLinkPtr = StatementLinkPtr->next_statement_link;
+
+        StatementLinkPtr->statement = NULL;
+        StatementLinkPtr->next_statement_link = NULL;
+        StatementLinkPtr->perv_statement_link = TempPtr;
+    }
+
+    /* Free/DeInit the last allocated link */
+    if(StatementLinkPtr->perv_statement_link != NULL)
+    {
+        TempPtr = StatementLinkPtr->perv_statement_link;
+        TempPtr->next_statement_link = NULL;
+        free(StatementLinkPtr);
+    }
+
+    Parser_Eat(Parser, RCURLY);
+
+    return CompoundMainNode;
+}
+
 s_ast_parameter* Parser_Compound_Parameter(s_parser_parser* Parser)
 {
     s_ast_parameter* CompoundParameterNode;
@@ -438,6 +475,9 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
     struct parameter_link* ParamLinkPtr;
     struct parameter_link* TempParamPtr;
 
+    struct cmp_var_decl_link*   VarDeclLinkPtr;
+    struct cmp_var_decl_link*   TempVarDeclPtr;
+
     struct c_statement_link* StatementLinkPtr;
     struct c_statement_link* TempStatementPtr;
 
@@ -451,6 +491,10 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
     CoumpoundStatementNode->parameter_link.parameter = NULL;
     CoumpoundStatementNode->parameter_link.next_parameter_link = NULL;
     CoumpoundStatementNode->parameter_link.perv_parameter_link = NULL;
+
+    CoumpoundStatementNode->cmp_var_decl_link.var_declaration = NULL;
+    CoumpoundStatementNode->cmp_var_decl_link.next_var_decl_link = NULL;
+    CoumpoundStatementNode->cmp_var_decl_link.perv_var_decl_link = NULL;
 
     CoumpoundStatementNode->statement_link.statement = NULL;
     CoumpoundStatementNode->statement_link.next_statement_link = NULL;
@@ -499,8 +543,38 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
 
     Parser_Eat( Parser, RPAREN );
 
-    /* Parse Statments */
+    /* Parse Statements */
     Parser_Eat( Parser, LCURLY );
+
+    /* Parse compound variable declarations */
+    if(Parser->current_token.type >= INT8 && Parser->current_token.type <= FLOAT)
+    {
+        VarDeclLinkPtr = &CoumpoundStatementNode->cmp_var_decl_link;
+
+        while(Parser->current_token.type >= INT8 && Parser->current_token.type <= FLOAT)
+        {
+            VarDeclLinkPtr->var_declaration = Parser_Declaration( Parser );
+
+            VarDeclLinkPtr->next_var_decl_link = (struct cmp_var_decl_link*) malloc(sizeof(struct cmp_var_decl_link));
+
+            /* Init new link */
+            TempVarDeclPtr = VarDeclLinkPtr;
+
+            VarDeclLinkPtr = VarDeclLinkPtr->next_var_decl_link;
+
+            VarDeclLinkPtr->var_declaration = NULL;
+            VarDeclLinkPtr->next_var_decl_link = NULL;
+            VarDeclLinkPtr->perv_var_decl_link = TempVarDeclPtr;
+        }
+
+        /* Free/DeInit the last allocated link */
+        if(VarDeclLinkPtr->perv_var_decl_link != NULL)
+        {
+            TempVarDeclPtr = VarDeclLinkPtr->perv_var_decl_link;
+            TempVarDeclPtr->next_var_decl_link = NULL;
+            free(VarDeclLinkPtr);
+        }
+    }
 
     StatementLinkPtr = &CoumpoundStatementNode->statement_link;
 
@@ -536,8 +610,9 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
 s_ast_program* Parser_Parse(s_parser_parser* Parser)
 {
 	s_ast_program*          ProgramNode;
-	struct var_decl_link*   VarDeclLinkPtr;
-    struct var_decl_link*   TempVarDeclPtr;
+
+	struct global_var_decl_link*   VarDeclLinkPtr;
+    struct global_var_decl_link*   TempVarDeclPtr;
 
     struct compound_link*   CompoundLinkPtr;
     struct compound_link*   TempCompoundPtr;
@@ -547,9 +622,9 @@ s_ast_program* Parser_Parse(s_parser_parser* Parser)
 	/* Init */
 	ProgramNode->info.type = PROGRAM;
 
-	ProgramNode->var_decl_link.var_declaration = NULL;
-	ProgramNode->var_decl_link.next_var_decl_link = NULL;
-	ProgramNode->var_decl_link.perv_var_decl_link = NULL;
+	ProgramNode->global_var_decl_link.var_declaration = NULL;
+	ProgramNode->global_var_decl_link.next_var_decl_link = NULL;
+	ProgramNode->global_var_decl_link.perv_var_decl_link = NULL;
 
     ProgramNode->compound_link.compound_statement = NULL;
     ProgramNode->compound_link.next_compound_link = NULL;
@@ -564,13 +639,13 @@ s_ast_program* Parser_Parse(s_parser_parser* Parser)
 	    Parser_Eat(Parser, VARIABLES);
 	    Parser_Eat(Parser, LCURLY);
 
-	    VarDeclLinkPtr = &ProgramNode->var_decl_link;
+	    VarDeclLinkPtr = &ProgramNode->global_var_decl_link;
 
 	    while(Parser->current_token.type != RCURLY)
 	    {
 	        VarDeclLinkPtr->var_declaration = Parser_Declaration( Parser );
 
-	        VarDeclLinkPtr->next_var_decl_link = (struct var_decl_link*) malloc(sizeof(struct var_decl_link));
+	        VarDeclLinkPtr->next_var_decl_link = (struct global_var_decl_link*) malloc(sizeof(struct global_var_decl_link));
 
 	        /* Init new link */
 	        TempVarDeclPtr = VarDeclLinkPtr;

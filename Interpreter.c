@@ -12,6 +12,7 @@
 #include "AST.h"
 #include "Debug_Walker.h"
 #include "Parser.h"
+#include "Semantic_Analyzer.h"
 
 int main(void) {
 
@@ -54,6 +55,8 @@ int main(void) {
 	ProgramNode = Parser_Parse(&Parser);
 
 	Debug_Walker_Walkthrought(ProgramNode);
+
+	Semantic_Analyzer_Walkthrought( ProgramNode );
 
 	free((void*)Text);
 

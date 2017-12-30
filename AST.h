@@ -139,6 +139,14 @@ typedef struct
         struct parameter_link*  perv_parameter_link;
     } parameter_link;
 
+    /* Compound Variable Declarations linked list */
+    struct cmp_var_decl_link
+    {
+        s_ast_var_declaration* var_declaration;
+        struct cmp_var_decl_link*  next_var_decl_link;
+        struct cmp_var_decl_link*  perv_var_decl_link;
+    } cmp_var_decl_link;
+
     /* Statement linked list */
     struct c_statement_link
     {
@@ -153,6 +161,14 @@ typedef struct
 typedef struct
 {
 	s_ast_node_info	info;
+
+    /* Main Variable Declarations linked list */
+    struct main_var_decl_link
+    {
+        s_ast_var_declaration* var_declaration;
+        struct main_var_decl_link*  next_var_decl_link;
+        struct main_var_decl_link*  perv_var_decl_link;
+    } main_var_decl_link;
 
 	/* Statement linked list */
 	struct statement_link
@@ -169,13 +185,13 @@ typedef struct
 {
 	s_ast_node_info	info;
 
-	/* Variable Declarations linked list */
-	struct var_decl_link
+	/* Global Variable Declarations linked list */
+	struct global_var_decl_link
 	{
 		s_ast_var_declaration* var_declaration;
-		struct var_decl_link*  next_var_decl_link;
-		struct var_decl_link*  perv_var_decl_link;
-	} var_decl_link;
+		struct global_var_decl_link*  next_var_decl_link;
+		struct global_var_decl_link*  perv_var_decl_link;
+	} global_var_decl_link;
 
 	/* Compound Statement linked list */
     struct compound_link

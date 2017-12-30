@@ -11,11 +11,14 @@
 #define KEY_WORD_NUM            9
 #define KEY_WORD_MAX_LENGHT     32
 
+#define VAR_NAME_MAX_LENGHT     32
+
 typedef enum
 {
 	/* Key Words */
 	VARIABLES,
 	MAIN,
+	/* Key Words - Built-in Types */
 	INT8,
 	INT16,
 	INT32,
@@ -50,7 +53,7 @@ typedef struct
 	{
 		uint32_t	integer_const;
 		float       float_const;
-		char        string[32];
+		char        string[VAR_NAME_MAX_LENGHT];
 	} value;
 } s_lexer_token;
 
