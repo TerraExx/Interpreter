@@ -48,6 +48,9 @@ s_symbol_symbol_table* Symbol_Table_CreateTable(uint8_t* name, uint16_t hashSize
     /* Create Hash */
     SymbolTable->symbolHash = Symbol_Table_CreateHash( SymbolTable->hash_info.hashSize );
 
+    /* Debug Printout */
+    System_Print(" \n\tCreated Symbol Table: %s\n", name);
+
     return SymbolTable;
 }
 
@@ -78,52 +81,143 @@ uint16_t Symbol_Table_Hash(uint8_t* key, uint16_t hashSize)
 
 void Symbol_Table_InsertSymbol( s_symbol_symbol* symbol, s_symbol_symbol_table* symbol_table )
 {
-    uint16_t             Index;
+    uint16_t    Index;
+    uint16_t    Idx;
 
-    /* Find has index */
+    s_symbol_symbol** TempSymbolPtr;
+
+    enum e_symbol_table_insertSymbol
+    {
+        INSERTED,
+        REDECLARED,
+        HASH_FULL
+    } Status;
+
+    /* Init */
+    TempSymbolPtr = NULL;
+
+    /* Find hash index */
     Index = Symbol_Table_Hash(symbol->name, symbol_table->hash_info.hashSize);
 
-    /* Insert symbol into symbol table */
-    if( *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Index)) == NULL )
+    /* Try to insert the symbol into symbol table */
+    TempSymbolPtr = ((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Index));
+    if( *TempSymbolPtr == NULL )
     {
-        *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Index)) = symbol;
+        *TempSymbolPtr = symbol;
 
-        System_Print("\tINSERT: %s \t->\t %s\n", symbol->name, symbol_table->scope);
+        Status = INSERTED;
+    }
+    else if( strcmp((const char*)(*TempSymbolPtr)->name, (const char*)symbol->name) == 0 )
+    {
+        /* Found Variable already declared */
+        Status = REDECLARED;
     }
     else
     {
-        System_Print("Semantic Error: Symbol %s redeclared in Symbol Table %s, or Hash Table to small!\n", symbol->name, symbol_table->scope);
-        exit(1);
+        /* Find the first free slot or if the variable is already declared */
+        for(Idx = Index + 1; Idx < Index + symbol_table->hash_info.hashSize; Idx++)
+        {
+            TempSymbolPtr = ((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + (Idx % symbol_table->hash_info.hashSize)));
+
+            if(*TempSymbolPtr == NULL)
+            {
+                /* Found Free Slot */
+                *TempSymbolPtr = symbol;
+
+                Status = INSERTED;
+                break;
+            }
+            else if(strcmp((const char*)(*TempSymbolPtr)->name, (const char*)symbol->name) == 0)
+            {
+                /* Found Variable already declared */
+                Status = REDECLARED;
+            }
+        }
+
+        /* Check if there was no space */
+        if(Idx == Index + symbol_table->hash_info.hashSize)
+        {
+            Status = HASH_FULL;
+        }
     }
 
+    /* Debug Printout */
+    switch(Status)
+    {
+    case INSERTED:
+        System_Print("\t\tINSERT: %s \t->\t %s\n", symbol->name, symbol_table->scope);
+        break;
+    case REDECLARED:
+        System_Print("Semantic Error: Symbol %s redeclared in Symbol Table %s!\n", symbol->name, symbol_table->scope);
+        exit(1);
+        break;
+    case HASH_FULL:
+        System_Print("Semantic Error: Hash Table to small!\n");
+        exit(1);
+        break;
+    }
 }
 
 s_symbol_symbol* Symbol_Table_GetSymbol( uint8_t* name, s_symbol_symbol_table* symbol_table )
 {
+    uint16_t    Index;
+    uint16_t    Idx;
+
     s_symbol_symbol*    Symbol;
-    uint16_t            Index;
+
+    enum e_symbol_table_insertSymbol
+    {
+        FOUND,
+        NOT_FOUND
+    } Status;
 
     /* Debug Printout */
-    System_Print("\tLOOKUP: %s \t->\t %s\n", name, symbol_table->scope);
+    System_Print("\t\tLOOKUP: %s \t->\t %s\n", name, symbol_table->scope);
 
     /* Init */
     Symbol = NULL;
 
+    /* Try and find the Variable in local/current scope */
     /* Hash the name */
     Index = Symbol_Table_Hash( name, symbol_table->hash_info.hashSize );
 
     /* Find if the symbol exists */
-    Symbol = *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Index));
-    if( Symbol != NULL )
+    for(Idx = Index; Idx < Index + symbol_table->hash_info.hashSize; Idx++)
     {
-        /* Check if the symbol is correct */
-        if( strcmp((const char*)name, (const char*)Symbol->name) != 0 )
+        Symbol = *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + (Idx % symbol_table->hash_info.hashSize)));
+        if( Symbol != NULL )
         {
-            /* Symbol not correct */
-            System_Print("Semantic Error: Looking for symbol: %s, found hash of symbol: %s\n", name, Symbol->name);
-
-            Symbol = NULL;
+            /* Check if the symbol is correct */
+            if( strcmp((const char*)name, (const char*)Symbol->name) == 0 )
+            {
+                /* Symbol found */
+                Status = FOUND;
+                break;
+            }
         }
+        else
+        {
+            /* Symbol Not Found */
+            Status = NOT_FOUND;
+            break;
+        }
+    }
+
+    if(Idx == Index + symbol_table->hash_info.hashSize)
+    {
+        /* Symbol Not Found */
+        Status = NOT_FOUND;
+    }
+
+    /* Try and find the Variable in global scope */
+    if( Status == NOT_FOUND && symbol_table != Symbol_Table_HeadLink.symbolTable )
+    {
+        /* ReInit */
+        symbol_table = Symbol_Table_HeadLink.symbolTable;
+        Symbol = NULL;
+
+        /* Call Get Symbol for global scope */
+        Symbol = Symbol_Table_GetSymbol( name, symbol_table );
     }
 
     return Symbol;

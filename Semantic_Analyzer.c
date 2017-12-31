@@ -78,7 +78,7 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
     case COMPOUND_MAIN:
         /* Create new Symbol Table */
-        Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)"main", 512);
+        Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)"main", 128);
 
         /* Add the new Symbol Table to the linked list */
         TempSymbolTableLinkPtr = &Symbol_Table_HeadLink;
@@ -108,6 +108,15 @@ void Semantic_Analyzer_Visit( void* NodePtr )
             TempNodePtr = (void*)((struct main_var_decl_link*)TempNodePtr)->next_var_decl_link;
         }
 
+        /* Statement Node Visit */
+        TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct statement_link*)TempNodePtr)->statement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((struct statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct statement_link*)TempNodePtr)->next_statement_link;
+        }
+
         /* Return to global scope */
         Semantic_Analyzer_Statistics.currentTable = Symbol_Table_HeadLink.symbolTable;
         break;
@@ -131,7 +140,7 @@ void Semantic_Analyzer_Visit( void* NodePtr )
                 );
 
         /* Create new Symbol Table */
-        Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)((s_ast_compound*)NodePtr)->name.value.string, 512);
+        Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)((s_ast_compound*)NodePtr)->name.value.string, 128);
 
         /* Add the new Symbol Table to the linked list */
         TempSymbolTableLinkPtr = &Symbol_Table_HeadLink;
@@ -170,12 +179,22 @@ void Semantic_Analyzer_Visit( void* NodePtr )
             TempNodePtr = (void*)((struct cmp_var_decl_link*)TempNodePtr)->next_var_decl_link;
         }
 
+        /* Statement Node Visit */
+        TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct c_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((struct c_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct c_statement_link*)TempNodePtr)->next_statement_link;
+        }
+
         /* Return to global scope */
         Semantic_Analyzer_Statistics.currentTable = Symbol_Table_HeadLink.symbolTable;
 
         break;
 
     case COMPOUND_RETURN:
+        /* No visit necessary */
         break;
 
     case PARAMETER:
@@ -198,21 +217,44 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         break;
 
     case ASSIGNMENT:
+        /* Variable (Left Operand) Visit */
+        Semantic_Analyzer_Visit( ((s_ast_assignment*)NodePtr)->variable );
+
+        /* Expression Visit */
+        Semantic_Analyzer_Visit( ((s_ast_assignment*)NodePtr)->expression );
         break;
 
     case BINARY_OP:
+        /* Visit Left Operand */
+        Semantic_Analyzer_Visit( ((s_ast_binary*)NodePtr)->leftOperand );
+
+        /* Visit Right Operand */
+        Semantic_Analyzer_Visit( ((s_ast_binary*)NodePtr)->rightOperand );
         break;
 
     case UNARY_OP:
+        /* Visit Operand */
+        Semantic_Analyzer_Visit( ((s_ast_unary*)NodePtr)->operand );
         break;
 
     case NUM:
+        /* No visit necessary */
         break;
 
     case TYPE:
+        /* No visit necessary */
         break;
 
     case VAR:
+        /* Check if variable is declared in global or current scope */
+        TempSymbolPtr = Symbol_Table_GetSymbol((uint8_t*)((s_ast_variable*)NodePtr)->token.value.string, Semantic_Analyzer_Statistics.currentTable);
+
+        if( TempSymbolPtr == NULL )
+        {
+            /* Var has not been declared*/
+            System_Print("Semantic Error: Variable %s not found in global scope or local scope.\n", (uint8_t*)((s_ast_variable*)NodePtr)->token.value.string);
+            exit(1);
+        }
         break;
 
     default:
@@ -225,10 +267,10 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 void Semantic_Analyzer_Walkthrought( s_ast_program* ProgramNode )
 {
     /* Debug printout */
-    System_Print(" \n \nCreating Symbol Tables:\n \n");
+    System_Print(" \n \nCreating Symbol Tables:\n");
 
     /* Create Global System Table */
-    Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*) "global", 1024);
+    Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*) "global", 128);
 
     /* Init System Table Head link */
     Symbol_Table_HeadLink.symbolTable = Semantic_Analyzer_Statistics.currentTable;

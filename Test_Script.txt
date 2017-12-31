@@ -7,7 +7,7 @@ variables
 
 uint8 foo( float Par1, uint32 Par2)
 {
-	uint16 FooVar;
+	uint8  FooVar;
 
 	Test_1 = 6;
 	Test_3 = 5;
