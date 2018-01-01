@@ -26,6 +26,9 @@ main
 	int16 Ovo, Bi, Trebalo;
 	uint8 Raditi;
 
-	Test_1 = 5 * 3 + - 2 - 5 * Test_8;
-	Test_2 = 7 / 3;
+	Ovo = 5;
+	Test_2 = 2;
+	Test_5 = 3;
+
+	Test_1 = Ovo + Test_2 - Test_5 + 2 * 2;
 }

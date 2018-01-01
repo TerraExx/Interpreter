@@ -293,5 +293,5 @@ void Semantic_Analyzer_Walkthrought( s_ast_program* ProgramNode )
     /* Debug printout */
     System_Print(" \n \nSymbol Tables Created:");
 
-    Semantic_Analyzer_PrintoutSymbolTableAll();
+    Symbol_Table_PrintoutSymbolTableAll();
 }

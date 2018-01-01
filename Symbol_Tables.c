@@ -54,6 +54,32 @@ s_symbol_symbol_table* Symbol_Table_CreateTable(uint8_t* name, uint16_t hashSize
     return SymbolTable;
 }
 
+s_symbol_symbol_table* Symbol_Table_GetTable( uint8_t* name )
+{
+    s_symbol_symbol_table* SymbolTable;
+
+    s_symbol_symTable_link* TempSymbolTableLinkPtr;
+
+    /* Init */
+    SymbolTable = NULL;
+    TempSymbolTableLinkPtr = &Symbol_Table_HeadLink;
+
+    do
+    {
+        /* Check scope */
+        if(strcmp((const char*)TempSymbolTableLinkPtr->symbolTable->scope, (const char*)name) == 0)
+        {
+            /* Symbol table found */
+            SymbolTable = TempSymbolTableLinkPtr->symbolTable;
+            break;
+        }
+
+        TempSymbolTableLinkPtr = TempSymbolTableLinkPtr->next_symbol_table;
+    }while( TempSymbolTableLinkPtr != NULL );
+
+    return SymbolTable;
+}
+
 uint16_t Symbol_Table_Hash(uint8_t* key, uint16_t hashSize)
 {
     uint16_t    Index;
@@ -239,46 +265,50 @@ s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t*
     {
     case SYMBOL_BUILTIN_TYPE:
         /* Fill built-in specific info */
+        Symbol->type = (e_symbol_builtin_types*) malloc(sizeof(e_symbol_builtin_types));
+
         if(strcmp((const char*)name, (const char*)"int8") == 0)
         {
-            Symbol->U.builtin.type = BIT_INT8;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_INT8;
         }
         else if(strcmp((const char*)name, (const char*)"int16") == 0)
         {
-            Symbol->U.builtin.type = BIT_INT16;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_INT16;
         }
         else if(strcmp((const char*)name, (const char*)"int32") == 0)
         {
-            Symbol->U.builtin.type = BIT_INT32;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_INT32;
         }
         else if(strcmp((const char*)name, (const char*)"uint8") == 0)
         {
-            Symbol->U.builtin.type = BIT_UINT8;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_UINT8;
         }
         else if(strcmp((const char*)name, (const char*)"uint16") == 0)
         {
-            Symbol->U.builtin.type = BIT_UINT16;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_UINT16;
         }
         else if(strcmp((const char*)name, (const char*)"uint32") == 0)
         {
-            Symbol->U.builtin.type = BIT_UINT32;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_UINT32;
         }
         else if(strcmp((const char*)name, (const char*)"float") == 0)
         {
-            Symbol->U.builtin.type = BIT_FLOAT;
+            *(e_symbol_builtin_types*)(Symbol->type) = BIT_FLOAT;
         }
         break;
     case SYMBOL_VARIABLE:
         /* Fill variable specific info */
-        Symbol->U.variable.type = type;
-        Symbol->U.variable.value = 0;
+        Symbol->type = type;
+        Symbol->value = NULL;
         break;
     case SYMBOL_COMPOUND:
         /* Fill compound specific info */
-        Symbol->U.compound.type = type;
+        Symbol->type = type;
+        Symbol->value = NULL;
         break;
     case SYMBOL_PARAMETER:
-        Symbol->U.parameter.type = type;
+        Symbol->type = type;
+        Symbol->value = NULL;
         break;
     case SYMBOL_CATEGORY_NUM:
         break;
@@ -287,7 +317,45 @@ s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t*
     return Symbol;
 }
 
-void Semantic_Analyzer_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table)
+void Symbol_Table_MemAllocVar(s_symbol_symbol_table* symbol_table)
+{
+    uint16_t            Idx;
+    s_symbol_symbol*    TempSymbolPtr;
+
+    /* Allocate memory for all variables in symbol_table */
+    for(Idx = 0; Idx < symbol_table->hash_info.hashSize; Idx++)
+    {
+        TempSymbolPtr = *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Idx));
+        if( TempSymbolPtr != NULL )
+        {
+            if( TempSymbolPtr->category == SYMBOL_VARIABLE )
+            {
+                TempSymbolPtr->value = calloc(1,sizeof(uint32_t));
+            }
+        }
+    }
+}
+
+void Symbol_Table_MemFreeVar(s_symbol_symbol_table* symbol_table)
+{
+    uint16_t            Idx;
+    s_symbol_symbol*    TempSymbolPtr;
+
+    /* Free memory for all variables in symbol_table */
+    for(Idx = 0; Idx < symbol_table->hash_info.hashSize; Idx++)
+    {
+        TempSymbolPtr = *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Idx));
+        if( TempSymbolPtr != NULL )
+        {
+            if( TempSymbolPtr->category == SYMBOL_VARIABLE )
+            {
+                free(TempSymbolPtr->value);
+            }
+        }
+    }
+}
+
+void Symbol_Table_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table)
 {
     uint16_t            Idx;
     s_symbol_symbol*    TempSymbolPtr;
@@ -295,9 +363,9 @@ void Semantic_Analyzer_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table)
     /* Print Scope */
     System_Print(" \n \n");
     System_Print("\t\t\t\t\tSymbol Table: %s\n", symbol_table->scope);
-    System_Print("\t------------------------------------------------------------------------------\n");
-    System_Print("\t\tCategory\t|\tName\t|\tType\t|\tIndex\n");
-    System_Print("\t------------------------------------------------------------------------------\n");
+    System_Print("\t-------------------------------------------------------------------------------------------\n");
+    System_Print("\t\tCategory\t|\tName\t|\tType\t|\tValue\t|\tIndex\n");
+    System_Print("\t-------------------------------------------------------------------------------------------\n");
 
 
     /* Print Symbol Entries */
@@ -308,23 +376,37 @@ void Semantic_Analyzer_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table)
         {
             if( TempSymbolPtr->category == SYMBOL_BUILTIN_TYPE )
             {
-                System_Print("\t\t%s\t|\t%s\t|\tn/a\t|\t%d\n", SymbolCategoryString[TempSymbolPtr->category], TempSymbolPtr->name, Idx);
+                System_Print("\t\t%s\t|\t%s\t|\tn/a\t|\tNULL\t|\t%d\n", SymbolCategoryString[TempSymbolPtr->category], TempSymbolPtr->name, Idx);
             }
             else
             {
-                System_Print("\t\t%s\t|\t%s\t|\t%s\t|\t%d\n"
-                            , SymbolCategoryString[TempSymbolPtr->category]
-                            , TempSymbolPtr->name
-                            , ((s_symbol_symbol*)(TempSymbolPtr->U.variable.type))->name
-                            , Idx
-                            );
+                if( TempSymbolPtr->value == NULL )
+                {
+                    System_Print("\t\t%s\t|\t%s\t|\t%s\t|\t%s\t|\t%d\n"
+                                , SymbolCategoryString[TempSymbolPtr->category]
+                                , TempSymbolPtr->name
+                                , ((s_symbol_symbol*)(TempSymbolPtr->type))->name
+                                , "NULL"
+                                , Idx
+                                );
+                }
+                else
+                {
+                    System_Print("\t\t%s\t|\t%s\t|\t%s\t|\t%d\t|\t%d\n"
+                                , SymbolCategoryString[TempSymbolPtr->category]
+                                , TempSymbolPtr->name
+                                , ((s_symbol_symbol*)(TempSymbolPtr->type))->name
+                                , *(uint32_t*)TempSymbolPtr->value
+                                , Idx
+                                );
+                }
             }
-            System_Print("\t------------------------------------------------------------------------------\n");
+            System_Print("\t-------------------------------------------------------------------------------------------\n");
         }
     }
 }
 
-void Semantic_Analyzer_PrintoutSymbolTableAll()
+void Symbol_Table_PrintoutSymbolTableAll()
 {
     s_symbol_symTable_link* TempSymbolTablePtr;
 
@@ -332,7 +414,7 @@ void Semantic_Analyzer_PrintoutSymbolTableAll()
 
     while(TempSymbolTablePtr != NULL)
     {
-        Semantic_Analyzer_PrintoutSymbolTable( TempSymbolTablePtr->symbolTable );
+        Symbol_Table_PrintoutSymbolTable( TempSymbolTablePtr->symbolTable );
 
         TempSymbolTablePtr = TempSymbolTablePtr->next_symbol_table;
     }

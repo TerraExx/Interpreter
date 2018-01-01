@@ -33,37 +33,10 @@ typedef enum
 
 typedef struct
 {
-    e_symbol_builtin_types  type;
-} s_symbol_builtin;
-
-typedef struct
-{
-    void*       type;  /* Pointer to Symbol of the Variable Type */
-    uint32_t    value;
-} s_symbol_variable;
-
-typedef struct
-{
-    void*    type; /* Pointer to Symbol of the Compound Return Type */
-} s_symbol_compound;
-
-typedef struct
-{
-    void*    type; /* Pointer to Symbol of the Compound Parameter Type */
-} s_symbol_parameter;
-
-typedef struct
-{
     e_symbol_category   category;
     uint8_t             name[MAX_SYMBOL_NAME_LENGHT];
-    union
-    {
-        s_symbol_builtin    builtin;
-        s_symbol_variable   variable;
-        s_symbol_compound   compound;
-        s_symbol_parameter  parameter;
-    }U;
-
+    void*               type;
+    void*               value;
 } s_symbol_symbol;
 
 typedef struct
@@ -91,6 +64,8 @@ s_symbol_symbol** Symbol_Table_CreateHash(uint16_t HashSize);
 
 s_symbol_symbol_table* Symbol_Table_CreateTable(uint8_t* name, uint16_t hashSize);
 
+s_symbol_symbol_table* Symbol_Table_GetTable( uint8_t* name );
+
 uint16_t Symbol_Table_Hash(uint8_t* key, uint16_t hashSize);
 
 void Symbol_Table_InsertSymbol( s_symbol_symbol* symbol, s_symbol_symbol_table* symbol_table );
@@ -99,8 +74,12 @@ s_symbol_symbol* Symbol_Table_GetSymbol( uint8_t* name, s_symbol_symbol_table* s
 
 s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t* name, s_symbol_symbol* type );
 
-void Semantic_Analyzer_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table);
+void Symbol_Table_MemAllocVar(s_symbol_symbol_table* symbol_table);
 
-void Semantic_Analyzer_PrintoutSymbolTableAll();
+void Symbol_Table_MemFreeVar(s_symbol_symbol_table* symbol_table);
+
+void Symbol_Table_PrintoutSymbolTable(s_symbol_symbol_table* symbol_table);
+
+void Symbol_Table_PrintoutSymbolTableAll();
 
 #endif /* INTERPRETER_SYMBOL_TABLES_H_ */
