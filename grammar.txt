@@ -14,9 +14,13 @@ compound_statement_main : MAIN  LCURLY ((variable_declaration)*)? statement_list
 
 statement_list : statement SEMI | statement SEMI statement_list 
 
-statement : assignment_statement | compound_statement_call | return | if_statement | empty
+statement : assignment_statement | compound_statement_call | return | if_statement | for_statement | empty
 
-if_statement: IF LPAREN expr RPAREN LCURLY statement_list RCURLY (ELSE LCRULY statement_list RCURLY)?
+for_statement : FOR LPAREN (assignment_statement | compound_statement_call)? SEMI expr SEMI (assignment_statement | compound_statement_call)? RPAREN LCURLY statement_list RCURLY
+
+loop_statement_list : statement SEMI | statement SEMI statement_list | BREAK SEMI 
+
+if_statement : IF LPAREN expr RPAREN LCURLY statement_list RCURLY (ELSE LCRULY loop_statement_list RCURLY)?
 
 compound_statement_call : variable LPAREN argument_list RPAREN
 

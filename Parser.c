@@ -656,6 +656,92 @@ s_ast_ifStatement* Parser_If_Statement(s_parser_parser* Parser)
     return IfStatementNode;
 }
 
+s_ast_breakStatement* Parser_Compound_Break_Statement(s_parser_parser* Parser)
+{
+    s_ast_breakStatement* BreakNode;
+
+    BreakNode = (s_ast_breakStatement*)malloc(sizeof(s_ast_breakStatement));
+
+    /* Init */
+    BreakNode->info.type = BREAK_STATEMENT;
+    BreakNode->info.line = Parser->lexer->line;
+
+    Parser_Eat( Parser, BREAK );
+
+    return BreakNode;
+}
+
+s_ast_forStatement* Parser_For_Statement(s_parser_parser* Parser)
+{
+    s_ast_forStatement* ForStatementNode;
+
+    ForStatementNode = (s_ast_forStatement*)malloc(sizeof(s_ast_forStatement));
+
+    /* Init */
+    ForStatementNode->info.type = FOR_STATEMENT;
+    ForStatementNode->info.line = Parser->lexer->line;
+
+    ForStatementNode->initStatement = NULL;
+
+    ForStatementNode->condition = NULL;
+
+    ForStatementNode->statement_link.statement = NULL;
+    ForStatementNode->statement_link.next_statement_link = NULL;
+    ForStatementNode->statement_link.perv_statement_link = NULL;
+
+    ForStatementNode->postStatement = NULL;
+
+    /* Parse For statement */
+    Parser_Eat( Parser, FOR );
+    Parser_Eat( Parser, LPAREN );
+
+    /* Check statement type */
+    if( Parser->current_token.type == ID )
+    {
+        if( Lexer_Peek( (uint8_t*)"=", Parser->lexer ) == TRUE )
+        {
+            /* Assignment Statement */
+            ForStatementNode->initStatement = Parser_Assignment_Statement( Parser );
+        }
+        else if( Lexer_Peek( (uint8_t*)"(", Parser->lexer ) == TRUE )
+        {
+            /* Compound Statement Call */
+            ForStatementNode->initStatement = Parser_Compound_Call( Parser );
+        }
+    }
+
+    Parser_Eat( Parser, SEMICOL );
+
+    ForStatementNode->condition = Parser_Expression( Parser );
+
+    Parser_Eat( Parser, SEMICOL );
+
+    /* Check statement type */
+    if( Parser->current_token.type == ID )
+    {
+        if( Lexer_Peek( (uint8_t*)"=", Parser->lexer ) == TRUE )
+        {
+            /* Assignment Statement */
+            ForStatementNode->postStatement = Parser_Assignment_Statement( Parser );
+        }
+        else if( Lexer_Peek( (uint8_t*)"(", Parser->lexer ) == TRUE )
+        {
+            /* Compound Statement Call */
+            ForStatementNode->postStatement = Parser_Compound_Call( Parser );
+        }
+    }
+
+    Parser_Eat( Parser, RPAREN );
+    Parser_Eat( Parser, LCURLY );
+
+    /* Parse For Statement Block */
+    Parser_Statement_List( Parser, &ForStatementNode->statement_link );
+
+    Parser_Eat( Parser, RCURLY );
+
+    return ForStatementNode;
+}
+
 void* Parser_Statement(s_parser_parser* Parser)
 {
     void*   Statement;
@@ -690,6 +776,18 @@ void* Parser_Statement(s_parser_parser* Parser)
     {
         /* if Statement */
         Statement = Parser_If_Statement( Parser );
+    }
+    else if( Parser->current_token.type == FOR )
+    {
+        /* for Statement */
+        Statement = Parser_For_Statement( Parser );
+    }
+    else if( Parser->current_token.type == BREAK )
+    {
+        /* Break Statement */
+        Statement = Parser_Compound_Break_Statement( Parser );
+
+        Parser_Eat( Parser, SEMICOL );
     }
 
     return Statement;

@@ -36,14 +36,16 @@ void Interpreter_PushFuncCall( s_symbol_symbol_table* symbolTable )
     Interpreter_FuncCallStack = (s_interpreter_funcCallLink*) malloc(sizeof(s_interpreter_funcCallLink));
 
     Interpreter_FuncCallStack->symbolTable = NULL;
+    Interpreter_FuncCallStack->compoundSymbol = NULL;
     Interpreter_FuncCallStack->next_funcCall = NULL;
     Interpreter_FuncCallStack->prev_funcCall = NULL;
 
     /* Push symbolTable to stack */
     Interpreter_FuncCallStack->symbolTable = symbolTable;
+    Interpreter_FuncCallStack->compoundSymbol = Symbol_Table_GetSymbol( (uint8_t*)symbolTable->scope, Symbol_Table_HeadLink.symbolTable );
     Interpreter_FuncCallStack->prev_funcCall = (struct s_interpreter_funcCallLink*)TempLinkPtr;
 
-    /* Alloc memory for all variables in symbolTable */
+    /* Allocate memory for all variables in symbolTable */
     Symbol_Table_MemAllocVar( symbolTable );
 }
 
@@ -111,6 +113,12 @@ uint32_t Interpreter_Visit( void* NodePtr )
         {
             Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
+            if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
+            {
+                /* Return Statement was executed. Stop function execution and return. */
+                return Return;
+            }
+
             TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
 
@@ -129,10 +137,10 @@ uint32_t Interpreter_Visit( void* NodePtr )
         {
             Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            if( ((s_ast_node_info*)((struct s_ast_statement_link*)TempNodePtr)->statement)->type == RETURN_STATEMENT  )
+            if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
             {
                 /* Return Statement was executed. Stop function execution and return. */
-                break;
+                return Return;
             }
 
             TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
@@ -144,8 +152,7 @@ uint32_t Interpreter_Visit( void* NodePtr )
         Interpreter_PushFuncCall( Symbol_Table_GetTable( (uint8_t*)((s_ast_compoundStatementCall*)NodePtr)->cmpStatementName.value.string ) );
 
         /* Get compound node pointer */
-        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)((s_ast_compoundStatementCall*)NodePtr)->cmpStatementName.value.string, Symbol_Table_HeadLink.symbolTable );
-        TempCompundNode = ((s_symbol_compoundStatementInfo*)TempSymbolPtr->info)->compoundNode;
+        TempCompundNode = ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->compoundNode;
 
         /* Init Compound Parameters */
         /* Compound Call Argument Visit */
@@ -162,11 +169,17 @@ uint32_t Interpreter_Visit( void* NodePtr )
             TempNodePtr_2 = (void*)((struct parameter_link*)TempNodePtr_2)->next_parameter_link;
         }
 
-        /* Get Compound Symbol */
-        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)((s_ast_compoundStatementCall*)NodePtr)->cmpStatementName.value.string, Symbol_Table_HeadLink.symbolTable );
+        /* Set Return Node Pointer */
+        ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnNode = NodePtr;
 
         /* Visit Compound Node */
         Interpreter_Visit( TempCompundNode );
+
+        /* Reinit Return Executed Flag */
+        ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted = FALSE;
+
+        /* Get Compound Symbol */
+        TempSymbolPtr = Interpreter_FuncCallStack->compoundSymbol;
 
         /* Set Compound Value to Return */
         Return = *(uint32_t*)TempSymbolPtr->value;
@@ -187,13 +200,71 @@ uint32_t Interpreter_Visit( void* NodePtr )
 
     case RETURN_STATEMENT:
         /* Get compound symbol */
-        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)Interpreter_FuncCallStack->symbolTable->scope, Symbol_Table_HeadLink.symbolTable );
+        TempSymbolPtr = Interpreter_FuncCallStack->compoundSymbol;
 
         /* Set compound value */
         *(uint32_t*)TempSymbolPtr->value = Interpreter_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
 
-        /* Set Return Value */
-        Return = FALSE;
+        /* Set Return Executed */
+        ((s_symbol_compoundStatementInfo*)TempSymbolPtr->info)->returnExecuted = TRUE;
+        break;
+
+    case FOR_STATEMENT:
+        /* Visit Init Statement */
+        if( ((s_ast_forStatement*)NodePtr)->initStatement != NULL )
+        {
+            Interpreter_Visit( ((s_ast_forStatement*)NodePtr)->initStatement );
+        }
+
+        /* Execute For */
+        if( ((s_ast_forStatement*)NodePtr)->condition != NULL )
+        {
+            while( Interpreter_Visit( ((s_ast_forStatement*)NodePtr)->condition ) )
+            {
+                /* Visit Statements */
+                TempNodePtr = (void*)&((s_ast_forStatement*)NodePtr)->statement_link;
+                while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+                {
+                    Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+                    if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
+                    {
+                        /* Return Statement was executed. Stop function execution and return. */
+                        return Return;
+                    }
+                    else if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+                    {
+                        /* Break Statement was executed. Stop loop execution and break. */
+                        break;
+                    }
+
+                    TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+                }
+
+                if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+                {
+                    /* Break Statement was executed. Stop loop execution and break. */
+                    break;
+                }
+
+                /* Visit Post Statement */
+                if( ((s_ast_forStatement*)NodePtr)->postStatement != NULL )
+                {
+                    Interpreter_Visit( ((s_ast_forStatement*)NodePtr)->postStatement );
+                }
+            }
+
+            /* ReInit Break Executed Flag */
+            ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted = FALSE;
+        }
+        break;
+
+    case BREAK_STATEMENT:
+        /* Get compound symbol */
+        TempSymbolPtr = Interpreter_FuncCallStack->compoundSymbol;
+
+        /* Set Return Executed */
+        ((s_symbol_compoundStatementInfo*)TempSymbolPtr->info)->breakExecuted = TRUE;
         break;
 
     case IF_STATEMENT:
@@ -207,7 +278,7 @@ uint32_t Interpreter_Visit( void* NodePtr )
             if( Return == TRUE )
             {
                 /* Condition was executed, skip the rest of if statement */
-                break;
+                return Return;
             }
             else
             {
@@ -215,13 +286,10 @@ uint32_t Interpreter_Visit( void* NodePtr )
             }
         }
 
-        if( Return == FALSE )
+        /* Visit Else Condition */
+        if(((s_ast_ifStatement*)NodePtr)->elseCondition != NULL)
         {
-            /* Visit Else Condition */
-            if(((s_ast_ifStatement*)NodePtr)->elseCondition != NULL)
-            {
-                Interpreter_Visit( ((s_ast_ifStatement*)NodePtr)->elseCondition );
-            }
+            Interpreter_Visit( ((s_ast_ifStatement*)NodePtr)->elseCondition );
         }
         break;
 
@@ -229,17 +297,28 @@ uint32_t Interpreter_Visit( void* NodePtr )
         /* Visit Condition */
         if( Interpreter_Visit( ((s_ast_ifCondition*)NodePtr)->condition ) )
         {
+            /* Set Return */
+            Return = TRUE;
+
             /* Visit Statements */
             TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->statement_link;
             while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
             {
                 Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
+                if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
+                {
+                    /* Return Statement was executed. Stop function execution and return. */
+                    return Return;
+                }
+                else if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+                {
+                    /* Break Statement was executed. Stop loop execution and return. */
+                    return Return;
+                }
+
                 TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
             }
-
-            /* Set Return */
-            Return = TRUE;
         }
         break;
 
@@ -249,6 +328,17 @@ uint32_t Interpreter_Visit( void* NodePtr )
         while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
             Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+            if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
+            {
+                /* Return Statement was executed. Stop function execution and return. */
+                return Return;
+            }
+            else if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+            {
+                /* Break Statement was executed. Stop loop execution and return. */
+                return Return;
+            }
 
             TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }

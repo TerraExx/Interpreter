@@ -11,6 +11,7 @@
 typedef struct
 {
     s_symbol_symbol_table*               symbolTable;
+    s_symbol_symbol*                     compoundSymbol;
     struct s_interpreter_funcCallLink*   next_funcCall;
     struct s_interpreter_funcCallLink*   prev_funcCall;
 } s_interpreter_funcCallLink;

@@ -133,6 +133,14 @@ void Debug_Walker_Printout()
         System_Print("RETURN\n");
         break;
 
+    case FOR_STATEMENT:
+        System_Print("FOR_STATEMENT\n");
+        break;
+
+    case BREAK_STATEMENT:
+        System_Print("BREAK_STATEMENT\n");
+        break;
+
     case IF_STATEMENT:
         System_Print("IF_STATEMENT\n");
         break;
@@ -378,6 +386,54 @@ void Debug_Walker_Visit( void* NodePtr )
 
         /* Visit Return Value */
         Debug_Walker_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        break;
+
+    case FOR_STATEMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( FOR_STATEMENT );
+
+        /* Add Vertical Line */
+        Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+        Debug_Walker_Statistics.VerLine.Idx++;
+
+        /* Visit Init Statement */
+        if( ((s_ast_forStatement*)NodePtr)->initStatement != NULL )
+        {
+            Debug_Walker_Visit( ((s_ast_forStatement*)NodePtr)->initStatement );
+        }
+
+        /* Visit Post Statement */
+        if( ((s_ast_forStatement*)NodePtr)->postStatement != NULL )
+        {
+            Debug_Walker_Visit( ((s_ast_forStatement*)NodePtr)->postStatement );
+        }
+
+        /* Visit Condition Statement */
+        if( ((s_ast_forStatement*)NodePtr)->condition != NULL )
+        {
+            Debug_Walker_Visit( ((s_ast_forStatement*)NodePtr)->condition );
+        }
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_forStatement*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            /* Check if this is the last argument */
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            {
+                /* Remove Vertical Line */
+                Debug_Walker_Statistics.VerLine.Idx--;
+            }
+
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+        }
+        break;
+
+    case BREAK_STATEMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( BREAK_STATEMENT );
         break;
 
     case IF_STATEMENT:

@@ -85,6 +85,15 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         break;
 
     case COMPOUND_MAIN:
+        /* Create and insert Compound Symbol into global scope */
+        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)"uint8", Symbol_Table_HeadLink.symbolTable);
+
+        Symbol_Table_InsertSymbol
+                (
+                    Symbol_Table_CreateSymbol( SYMBOL_COMPOUND, (uint8_t*)"main", TempSymbolPtr )
+                    , Semantic_Analyzer_Statistics.currentTable
+                );
+
         /* Create new Symbol Table */
         Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)"main", 128);
 
@@ -278,6 +287,39 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         {
             Semantic_Analyzer_Visit( ((s_ast_ifStatement*)NodePtr)->elseCondition );
         }
+        break;
+
+    case FOR_STATEMENT:
+        /* Visit Init Statement */
+        if( ((s_ast_forStatement*)NodePtr)->initStatement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((s_ast_forStatement*)NodePtr)->initStatement );
+        }
+
+        /* Visit Post Statement */
+        if( ((s_ast_forStatement*)NodePtr)->postStatement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((s_ast_forStatement*)NodePtr)->postStatement );
+        }
+
+        /* Visit Condition Statement */
+        if( ((s_ast_forStatement*)NodePtr)->condition != NULL )
+        {
+            Semantic_Analyzer_Visit( ((s_ast_forStatement*)NodePtr)->condition );
+        }
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_forStatement*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+        }
+        break;
+
+    case BREAK_STATEMENT:
+        /* No visit necessary */
         break;
 
     case IF_CONDITION:

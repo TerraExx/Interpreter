@@ -5,33 +5,23 @@ variables
 	uint32	Test_3, Test_7, Test_8;
 }
 
-uint8 foo( uint8 Par1 )
-{
-	uint8 FooVar;
-	
-	FooVar = Par1 > 2;
-	
-	return FooVar;
-}
-
 main
 {
 	float Proba;
 	int16 Ovo, Bi, Trebalo;
 	uint8 Raditi;
 	
-	Test_1 = 3;	
+	Test_2 = 0;
 	
-	if( foo( 1 ) )
+	for( Test_1 = 0; Test_1 < 10; Test_1 = Test_1 + 1 )
 	{
-		Test_2 = 5;
+		if( Test_2 == 5 )
+		{
+			return Proba;
+		}
+		
+		Test_2 = Test_2 + 1;
 	}
-	else if( Test_1 == 3 )
-	{
-		Test_2 = 7;
-	}
-	else
-	{
-		Test_2 = 6;
-	}
+	
+	Test_4 = 6;
 }

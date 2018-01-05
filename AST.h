@@ -30,6 +30,8 @@ typedef enum
 	IF_STATEMENT,
 	IF_CONDITION,
 	ELSE_CONDITION,
+	FOR_STATEMENT,
+	BREAK_STATEMENT,
 	PROGRAM
 }e_ast_node_type;
 
@@ -117,6 +119,27 @@ typedef struct s_ast_statement_link
     struct s_ast_statement_link*  next_statement_link;
     struct s_ast_statement_link*  perv_statement_link;
 } s_ast_statement_link;
+
+/* Break Statement */
+typedef struct
+{
+    s_ast_node_info info;
+} s_ast_breakStatement;
+
+/* For Statement */
+typedef struct
+{
+    s_ast_node_info info;
+
+    void*   initStatement;
+
+    void*   condition;
+
+    /* For Statement linked list */
+    s_ast_statement_link statement_link;
+
+    void*   postStatement;
+} s_ast_forStatement;
 
 /* If Condition */
 typedef struct

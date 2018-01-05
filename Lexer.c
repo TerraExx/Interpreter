@@ -10,6 +10,8 @@ uint8_t KeyWordString[KEYWORD_NUM][KEY_WORD_MAX_LENGHT] =
 		"return",
 		"if",
 		"else",
+		"for",
+		"break",
         "int8",
         "int16",
         "int32",
@@ -27,6 +29,8 @@ uint8_t TokenTypeString[TOKEN_TYPE_NUM][KEY_WORD_MAX_LENGHT] =
         "RETURN",
         "IF",
         "ELSE",
+        "FOR",
+        "BREAK",
         /* Key Words - Built-in Types */
         "INT8",
         "INT16",

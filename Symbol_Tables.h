@@ -34,8 +34,12 @@ typedef enum
 typedef struct
 {
     uint8_t parameterNum;
+
     void*   compoundNode;
     void*   returnNode;
+
+    uint8_t returnExecuted;
+    uint8_t breakExecuted;
 } s_symbol_compoundStatementInfo;
 
 typedef struct

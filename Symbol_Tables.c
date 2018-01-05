@@ -315,6 +315,9 @@ s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t*
 
         ((s_symbol_compoundStatementInfo*)Symbol->info)->parameterNum = 0;
         ((s_symbol_compoundStatementInfo*)Symbol->info)->compoundNode = NULL;
+        ((s_symbol_compoundStatementInfo*)Symbol->info)->returnNode = NULL;
+        ((s_symbol_compoundStatementInfo*)Symbol->info)->returnExecuted = FALSE;
+        ((s_symbol_compoundStatementInfo*)Symbol->info)->breakExecuted = FALSE;
         break;
     case SYMBOL_PARAMETER:
         /* Init Parameter */

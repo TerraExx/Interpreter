@@ -20,6 +20,8 @@ typedef enum
 	RETURN,
 	IF,
 	ELSE,
+	FOR,
+	BREAK,
 	/* Key Words - Built-in Types */
 	INT8,
 	INT16,
