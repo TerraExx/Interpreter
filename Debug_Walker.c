@@ -262,18 +262,18 @@ void Debug_Walker_Visit( void* NodePtr )
 
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
             /* Check if this is the last statement */
-            if(((struct statement_link*)TempNodePtr)->next_statement_link == NULL)
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
             {
                 /* Remove Vertical Line */
                 Debug_Walker_Statistics.VerLine.Idx--;
             }
 
-            Debug_Walker_Visit( ((struct statement_link*)TempNodePtr)->statement );
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 
@@ -313,18 +313,18 @@ void Debug_Walker_Visit( void* NodePtr )
 
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct c_statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
             /* Check if this is the last statement */
-            if(((struct c_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
             {
                 /* Remove Vertical Line */
                 Debug_Walker_Statistics.VerLine.Idx--;
             }
 
-            Debug_Walker_Visit( ((struct c_statement_link*)TempNodePtr)->statement );
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct c_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 
@@ -425,7 +425,7 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( IF_CONDITION );
 
         /* Add Vertical Line */
-        if(((s_ast_ifCondition*)NodePtr)->if_statement_link.statement != NULL)
+        if(((s_ast_ifCondition*)NodePtr)->statement_link.statement != NULL)
         {
             Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
             Debug_Walker_Statistics.VerLine.Idx++;
@@ -435,19 +435,19 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Visit( ((s_ast_ifCondition*)NodePtr)->condition );
 
         /* Visit Statements */
-        TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->if_statement_link;
-        while( TempNodePtr != NULL && ((struct if_statement_link*)TempNodePtr)->statement != NULL )
+        TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
             /* Check if this is the last argument */
-            if(((struct if_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
             {
                 /* Remove Vertical Line */
                 Debug_Walker_Statistics.VerLine.Idx--;
             }
 
-            Debug_Walker_Visit( ((struct if_statement_link*)TempNodePtr)->statement );
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct if_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 
@@ -456,26 +456,26 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( ELSE_CONDITION );
 
         /* Add Vertical Line */
-        if(((s_ast_elseCodnition*)NodePtr)->else_statement_link.statement != NULL)
+        if(((s_ast_elseCodnition*)NodePtr)->statement_link.statement != NULL)
         {
             Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
             Debug_Walker_Statistics.VerLine.Idx++;
         }
 
         /* Visit Statements */
-        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->else_statement_link;
-        while( TempNodePtr != NULL && ((struct else_statement_link*)TempNodePtr)->statement != NULL )
+        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
             /* Check if this is the last argument */
-            if(((struct else_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
             {
                 /* Remove Vertical Line */
                 Debug_Walker_Statistics.VerLine.Idx--;
             }
 
-            Debug_Walker_Visit( ((struct else_statement_link*)TempNodePtr)->statement );
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct else_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 

@@ -107,11 +107,11 @@ uint32_t Interpreter_Visit( void* NodePtr )
 
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Interpreter_Visit( ((struct statement_link*)TempNodePtr)->statement );
+            Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
 
         /* Debug Printout */
@@ -125,17 +125,17 @@ uint32_t Interpreter_Visit( void* NodePtr )
     case COMPOUND:
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct c_statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Interpreter_Visit( ((struct c_statement_link*)TempNodePtr)->statement );
+            Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            if( ((s_ast_node_info*)((struct c_statement_link*)TempNodePtr)->statement)->type == RETURN_STATEMENT  )
+            if( ((s_ast_node_info*)((struct s_ast_statement_link*)TempNodePtr)->statement)->type == RETURN_STATEMENT  )
             {
                 /* Return Statement was executed. Stop function execution and return. */
                 break;
             }
 
-            TempNodePtr = (void*)((struct c_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 
@@ -230,12 +230,12 @@ uint32_t Interpreter_Visit( void* NodePtr )
         if( Interpreter_Visit( ((s_ast_ifCondition*)NodePtr)->condition ) )
         {
             /* Visit Statements */
-            TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->if_statement_link;
-            while( TempNodePtr != NULL && ((struct if_statement_link*)TempNodePtr)->statement != NULL )
+            TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->statement_link;
+            while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
             {
-                Interpreter_Visit( ((struct if_statement_link*)TempNodePtr)->statement );
+                Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-                TempNodePtr = (void*)((struct if_statement_link*)TempNodePtr)->next_statement_link;
+                TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
             }
 
             /* Set Return */
@@ -245,12 +245,12 @@ uint32_t Interpreter_Visit( void* NodePtr )
 
     case ELSE_CONDITION:
         /* Visit Statements */
-        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->else_statement_link;
-        while( TempNodePtr != NULL && ((struct else_statement_link*)TempNodePtr)->statement != NULL )
+        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Interpreter_Visit( ((struct else_statement_link*)TempNodePtr)->statement );
+            Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct else_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 

@@ -126,12 +126,7 @@ typedef struct
     void*   condition;
 
     /* If Statement linked list */
-    struct if_statement_link
-    {
-        void*                      statement;
-        struct if_statement_link*  next_statement_link;
-        struct if_statement_link*  perv_statement_link;
-    } if_statement_link;
+    s_ast_statement_link statement_link;
 } s_ast_ifCondition;
 
 /* Else Condition */
@@ -140,12 +135,7 @@ typedef struct
     s_ast_node_info info;
 
     /* Else Statement linked list */
-    struct else_statement_link
-    {
-        void*                        statement;
-        struct else_statement_link*  next_statement_link;
-        struct else_statement_link*  perv_statement_link;
-    } else_statement_link;
+    s_ast_statement_link statement_link;
 } s_ast_elseCodnition;
 
 /* If Statement */
@@ -239,12 +229,7 @@ typedef struct
     } cmp_var_decl_link;
 
     /* Statement linked list */
-    struct c_statement_link
-    {
-        void*                   statement;
-        struct c_statement_link*  next_statement_link;
-        struct c_statement_link*  perv_statement_link;
-    } statement_link;
+    s_ast_statement_link statement_link;
 
 } s_ast_compound;
 
@@ -262,12 +247,7 @@ typedef struct
     } main_var_decl_link;
 
 	/* Statement linked list */
-	struct statement_link
-	{
-		void*					statement;
-		struct statement_link*	next_statement_link;
-		struct statement_link*	perv_statement_link;
-	} statement_link;
+	s_ast_statement_link statement_link;
 
 } s_ast_compound_main;
 

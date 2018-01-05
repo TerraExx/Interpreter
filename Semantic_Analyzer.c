@@ -118,11 +118,11 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Semantic_Analyzer_Visit( ((struct statement_link*)TempNodePtr)->statement );
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
 
         /* Return to global scope */
@@ -193,11 +193,11 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
         /* Statement Node Visit */
         TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->statement_link;
-        while( TempNodePtr != NULL && ((struct c_statement_link*)TempNodePtr)->statement != NULL )
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Semantic_Analyzer_Visit( ((struct c_statement_link*)TempNodePtr)->statement );
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct c_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
 
         /* Return to global scope */
@@ -285,23 +285,23 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         Semantic_Analyzer_Visit( ((s_ast_ifCondition*)NodePtr)->condition );
 
         /* Visit Statements */
-        TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->if_statement_link;
-        while( TempNodePtr != NULL && ((struct if_statement_link*)TempNodePtr)->statement != NULL )
+        TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Semantic_Analyzer_Visit( ((struct if_statement_link*)TempNodePtr)->statement );
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct if_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 
     case ELSE_CONDITION:
         /* Visit Statements */
-        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->else_statement_link;
-        while( TempNodePtr != NULL && ((struct else_statement_link*)TempNodePtr)->statement != NULL )
+        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
         {
-            Semantic_Analyzer_Visit( ((struct else_statement_link*)TempNodePtr)->statement );
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
 
-            TempNodePtr = (void*)((struct else_statement_link*)TempNodePtr)->next_statement_link;
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
         break;
 

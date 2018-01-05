@@ -366,16 +366,16 @@ s_ast_var_declaration* Parser_Declaration(s_parser_parser* Parser)
   return DeclarationNode;
 }
 
-void Parser_Statement_list(s_parser_parser* Parser, s_ast_statement_link* StatementLinkPtr)
+void Parser_Statement_List(s_parser_parser* Parser, s_ast_statement_link* StatementLinkPtr)
 {
-    struct statement_link*       TempPtr;
+    struct s_ast_statement_link*       TempPtr;
 
     /* Parse Statements */
     while(Parser->current_token.type != RCURLY)
     {
         StatementLinkPtr->statement = Parser_Statement( Parser );
 
-        StatementLinkPtr->next_statement_link = (struct statement_link*) malloc(sizeof(struct statement_link));
+        StatementLinkPtr->next_statement_link = (struct s_ast_statement_link*) malloc(sizeof(struct s_ast_statement_link));
 
         /* Init new link */
         TempPtr = StatementLinkPtr;
@@ -542,48 +542,21 @@ s_ast_elseCodnition* Parser_Else_Condition(s_parser_parser* Parser)
 {
     s_ast_elseCodnition* ElseConditionNode;
 
-    struct else_statement_link*       StatementLinkPtr;
-    struct else_statement_link*       TempPtr;
-
     ElseConditionNode = (s_ast_elseCodnition*)malloc(sizeof(s_ast_elseCodnition));
 
     /* Init */
     ElseConditionNode->info.type = ELSE_CONDITION;
     ElseConditionNode->info.line = Parser->lexer->line;
 
-    ElseConditionNode->else_statement_link.statement = NULL;
-    ElseConditionNode->else_statement_link.next_statement_link = NULL;
-    ElseConditionNode->else_statement_link.perv_statement_link = NULL;
+    ElseConditionNode->statement_link.statement = NULL;
+    ElseConditionNode->statement_link.next_statement_link = NULL;
+    ElseConditionNode->statement_link.perv_statement_link = NULL;
 
     /* Parser Else Statement Block */
     Parser_Eat( Parser, LCURLY);
 
-    StatementLinkPtr = &ElseConditionNode->else_statement_link;
-
     /* Parse Statements */
-    while(Parser->current_token.type != RCURLY)
-    {
-        StatementLinkPtr->statement = Parser_Statement( Parser );
-
-        StatementLinkPtr->next_statement_link = (struct else_statement_link*) malloc(sizeof(struct else_statement_link));
-
-        /* Init new link */
-        TempPtr = StatementLinkPtr;
-
-        StatementLinkPtr = StatementLinkPtr->next_statement_link;
-
-        StatementLinkPtr->statement = NULL;
-        StatementLinkPtr->next_statement_link = NULL;
-        StatementLinkPtr->perv_statement_link = TempPtr;
-    }
-
-    /* Free/DeInit the last allocated link */
-    if(StatementLinkPtr->perv_statement_link != NULL)
-    {
-        TempPtr = StatementLinkPtr->perv_statement_link;
-        TempPtr->next_statement_link = NULL;
-        free(StatementLinkPtr);
-    }
+    Parser_Statement_List( Parser, &ElseConditionNode->statement_link);
 
     Parser_Eat( Parser, RCURLY);
 
@@ -595,9 +568,6 @@ s_ast_ifCondition* Parser_If_Condition(s_parser_parser* Parser)
 {
     s_ast_ifCondition* IfConditionNode;
 
-    struct if_statement_link*       StatementLinkPtr;
-    struct if_statement_link*       TempPtr;
-
     IfConditionNode = (s_ast_ifCondition*)malloc(sizeof(s_ast_ifCondition));
 
     /* Init */
@@ -606,9 +576,9 @@ s_ast_ifCondition* Parser_If_Condition(s_parser_parser* Parser)
 
     IfConditionNode->condition = NULL;
 
-    IfConditionNode->if_statement_link.statement = NULL;
-    IfConditionNode->if_statement_link.next_statement_link = NULL;
-    IfConditionNode->if_statement_link.perv_statement_link = NULL;
+    IfConditionNode->statement_link.statement = NULL;
+    IfConditionNode->statement_link.next_statement_link = NULL;
+    IfConditionNode->statement_link.perv_statement_link = NULL;
 
     /* Parser If Statement Block */
     Parser_Eat( Parser, IF );
@@ -620,32 +590,8 @@ s_ast_ifCondition* Parser_If_Condition(s_parser_parser* Parser)
     Parser_Eat( Parser, RPAREN );
     Parser_Eat( Parser, LCURLY);
 
-    StatementLinkPtr = &IfConditionNode->if_statement_link;
-
     /* Parse Statements */
-    while(Parser->current_token.type != RCURLY)
-    {
-        StatementLinkPtr->statement = Parser_Statement( Parser );
-
-        StatementLinkPtr->next_statement_link = (struct if_statement_link*) malloc(sizeof(struct if_statement_link));
-
-        /* Init new link */
-        TempPtr = StatementLinkPtr;
-
-        StatementLinkPtr = StatementLinkPtr->next_statement_link;
-
-        StatementLinkPtr->statement = NULL;
-        StatementLinkPtr->next_statement_link = NULL;
-        StatementLinkPtr->perv_statement_link = TempPtr;
-    }
-
-    /* Free/DeInit the last allocated link */
-    if(StatementLinkPtr->perv_statement_link != NULL)
-    {
-        TempPtr = StatementLinkPtr->perv_statement_link;
-        TempPtr->next_statement_link = NULL;
-        free(StatementLinkPtr);
-    }
+    Parser_Statement_List( Parser, &IfConditionNode->statement_link );
 
     Parser_Eat( Parser, RCURLY);
 
@@ -756,9 +702,6 @@ s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
     struct main_var_decl_link*   VarDeclLinkPtr;
     struct main_var_decl_link*   TempVarDeclPtr;
 
-	struct statement_link*       StatementLinkPtr;
-	struct statement_link*       TempPtr;
-
 	CompoundMainNode = (s_ast_compound_main*) malloc(sizeof(s_ast_compound_main));
 
 	/* Init */
@@ -775,8 +718,6 @@ s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
 
     Parser_Eat(Parser, MAIN);
     Parser_Eat(Parser, LCURLY);
-
-    StatementLinkPtr = &CompoundMainNode->statement_link;
 
     /* Parse main variable declarations */
     if(Parser->current_token.type >= INT8 && Parser->current_token.type <= FLOAT)
@@ -809,29 +750,7 @@ s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
     }
 
     /* Parse Statements */
-    while(Parser->current_token.type != RCURLY)
-    {
-    	StatementLinkPtr->statement = Parser_Statement( Parser );
-
-    	StatementLinkPtr->next_statement_link = (struct statement_link*) malloc(sizeof(struct statement_link));
-
-        /* Init new link */
-        TempPtr = StatementLinkPtr;
-
-        StatementLinkPtr = StatementLinkPtr->next_statement_link;
-
-        StatementLinkPtr->statement = NULL;
-        StatementLinkPtr->next_statement_link = NULL;
-        StatementLinkPtr->perv_statement_link = TempPtr;
-    }
-
-    /* Free/DeInit the last allocated link */
-    if(StatementLinkPtr->perv_statement_link != NULL)
-    {
-        TempPtr = StatementLinkPtr->perv_statement_link;
-        TempPtr->next_statement_link = NULL;
-        free(StatementLinkPtr);
-    }
+    Parser_Statement_List( Parser, &CompoundMainNode->statement_link );
 
     Parser_Eat(Parser, RCURLY);
 
@@ -882,9 +801,6 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
 
     struct cmp_var_decl_link*   VarDeclLinkPtr;
     struct cmp_var_decl_link*   TempVarDeclPtr;
-
-    struct c_statement_link* StatementLinkPtr;
-    struct c_statement_link* TempStatementPtr;
 
     CoumpoundStatementNode = (s_ast_compound*) malloc(sizeof(s_ast_compound));
 
@@ -982,31 +898,8 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
         }
     }
 
-    StatementLinkPtr = &CoumpoundStatementNode->statement_link;
-
-    while( Parser->current_token.type != RCURLY )
-    {
-        StatementLinkPtr->statement = Parser_Statement( Parser );
-
-        StatementLinkPtr->next_statement_link = (struct c_statement_link*) malloc(sizeof(struct c_statement_link));
-
-        /* Init new link */
-        TempStatementPtr = StatementLinkPtr;
-
-        StatementLinkPtr = StatementLinkPtr->next_statement_link;
-
-        StatementLinkPtr->statement = NULL;
-        StatementLinkPtr->next_statement_link = NULL;
-        StatementLinkPtr->perv_statement_link = TempStatementPtr;
-    }
-
-    /* Free/DeInit the last allocated link */
-    if(StatementLinkPtr->perv_statement_link != NULL)
-    {
-        TempStatementPtr = StatementLinkPtr->perv_statement_link;
-        TempStatementPtr->next_statement_link = NULL;
-        free(StatementLinkPtr);
-    }
+    /* Parse Statements */
+    Parser_Statement_List( Parser, &CoumpoundStatementNode->statement_link );
 
     Parser_Eat( Parser, RCURLY );
 
