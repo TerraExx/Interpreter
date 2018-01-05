@@ -117,13 +117,37 @@ void Debug_Walker_Printout()
         System_Print("COMPOUND -> %s\n", ((s_ast_compound*)Debug_Walker_Statistics.Current_Node.Ptr)->name.value.string);
         break;
 
+    case COMPOUND_CALL:
+        System_Print("COMPOUND_CALL -> %s\n", ((s_ast_compoundStatementCall*)Debug_Walker_Statistics.Current_Node.Ptr)->cmpStatementName.value.string);
+        break;
+
+    case ARGUMENT:
+        System_Print("ARGUMENT\n");
+        break;
+
     case COMPOUND_RETURN:
         System_Print("COMPOUND_RETURN\n");
         break;
 
+    case RETURN_STATEMENT:
+        System_Print("RETURN\n");
+        break;
+
+    case IF_STATEMENT:
+        System_Print("IF_STATEMENT\n");
+        break;
+
+    case IF_CONDITION:
+        System_Print("IF_CONDITION\n");
+        break;
+
+    case ELSE_CONDITION:
+        System_Print("ELSE_CONDITION\n");
+        break;
+
     case PARAMETER:
-            System_Print("PARAMETER\n");
-            break;
+        System_Print("PARAMETER\n");
+        break;
 
     case ASSIGNMENT:
         System_Print("ASSIGNMENT\n");
@@ -166,8 +190,12 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( PROGRAM );
 
         /* Add Vertical Line */
-        Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
-        Debug_Walker_Statistics.VerLine.Idx++;
+        if(((s_ast_program*)NodePtr)->global_var_decl_link.var_declaration != NULL ||
+           ((s_ast_program*)NodePtr)->compound_link.compound_statement != NULL     )
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
 
         /* Global Variable Declaration Visit */
         TempNodePtr = (void*)&((s_ast_program*)NodePtr)->global_var_decl_link;
@@ -216,8 +244,12 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( COMPOUND_MAIN );
 
         /* Add Vertical Line */
-        Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
-        Debug_Walker_Statistics.VerLine.Idx++;
+        if(((s_ast_compound_main*)NodePtr)->main_var_decl_link.var_declaration != NULL ||
+           ((s_ast_compound_main*)NodePtr)->statement_link.statement != NULL     )
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
 
         /* Main Variable Declaration Visit */
         TempNodePtr = (void*)&((s_ast_compound_main*)NodePtr)->main_var_decl_link;
@@ -250,8 +282,13 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( COMPOUND );
 
         /* Add Vertical Line */
-        Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
-        Debug_Walker_Statistics.VerLine.Idx++;
+        if(((s_ast_compound*)NodePtr)->parameter_link.parameter != NULL ||
+           ((s_ast_compound*)NodePtr)->cmp_var_decl_link.var_declaration != NULL ||
+           ((s_ast_compound*)NodePtr)->statement_link.statement != NULL)
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
 
         /* Compound Return Type Visit */
         Debug_Walker_Visit( ((s_ast_compound*)NodePtr)->return_type );
@@ -291,12 +328,155 @@ void Debug_Walker_Visit( void* NodePtr )
         }
         break;
 
+    case COMPOUND_CALL:
+        /* Debug Printout */
+        Debug_Walker_Printout( COMPOUND_CALL );
+
+        /* Add Vertical Line */
+        if(((s_ast_compoundStatementCall*)NodePtr)->argument_link.argument != NULL)
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
+
+        /* Compound Call Argument Visit */
+        TempNodePtr = (void*)&((s_ast_compoundStatementCall*)NodePtr)->argument_link;
+        while( TempNodePtr != NULL && ((struct argument_link*)TempNodePtr)->argument != NULL )
+        {
+            /* Check if this is the last argument */
+            if(((struct argument_link*)TempNodePtr)->next_argument_link == NULL)
+            {
+                /* Remove Vertical Line */
+                Debug_Walker_Statistics.VerLine.Idx--;
+            }
+
+            Debug_Walker_Visit( ((struct argument_link*)TempNodePtr)->argument );
+
+            TempNodePtr = (void*)((struct argument_link*)TempNodePtr)->next_argument_link;
+        }
+        break;
+
+    case ARGUMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( ARGUMENT );
+
+        /* Visit Argument Nodes */
+        Debug_Walker_Visit( ((s_ast_compoundCallArg*)NodePtr)->argument );
+        break;
+
     case COMPOUND_RETURN:
         /* Debug Printout */
         Debug_Walker_Printout( COMPOUND_RETURN );
 
         /* Type Visit */
         Debug_Walker_Visit( ((s_ast_compound_return*)NodePtr)->type );
+        break;
+
+    case RETURN_STATEMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( RETURN );
+
+        /* Visit Return Value */
+        Debug_Walker_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        break;
+
+    case IF_STATEMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( IF_STATEMENT );
+
+        /* Add Vertical Line */
+        if(((s_ast_ifStatement*)NodePtr)->if_condition_link.ifCondition != NULL)
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
+
+        /* Visit If Conditions */
+        TempNodePtr = (void*)&((s_ast_ifStatement*)NodePtr)->if_condition_link;
+        while( TempNodePtr != NULL && ((struct if_condition_link*)TempNodePtr)->ifCondition != NULL )
+        {
+            if(((s_ast_ifStatement*)NodePtr)->elseCondition == NULL)
+            {
+                /* Check if this is the last argument */
+                if(((struct if_condition_link*)TempNodePtr)->next_ifCondition_link == NULL)
+                {
+                    /* Remove Vertical Line */
+                    Debug_Walker_Statistics.VerLine.Idx--;
+                }
+            }
+
+            Debug_Walker_Visit( ((struct if_condition_link*)TempNodePtr)->ifCondition );
+
+            TempNodePtr = (void*)((struct if_condition_link*)TempNodePtr)->next_ifCondition_link;
+        }
+
+        /* Visit Else Condition */
+        if(((s_ast_ifStatement*)NodePtr)->elseCondition != NULL)
+        {
+            /* Remove Vertical Line */
+            Debug_Walker_Statistics.VerLine.Idx--;
+
+            Debug_Walker_Visit( ((s_ast_ifStatement*)NodePtr)->elseCondition );
+        }
+        break;
+
+    case IF_CONDITION:
+        /* Debug Printout */
+        Debug_Walker_Printout( IF_CONDITION );
+
+        /* Add Vertical Line */
+        if(((s_ast_ifCondition*)NodePtr)->if_statement_link.statement != NULL)
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
+
+        /* Visit Condition */
+        Debug_Walker_Visit( ((s_ast_ifCondition*)NodePtr)->condition );
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_ifCondition*)NodePtr)->if_statement_link;
+        while( TempNodePtr != NULL && ((struct if_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            /* Check if this is the last argument */
+            if(((struct if_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            {
+                /* Remove Vertical Line */
+                Debug_Walker_Statistics.VerLine.Idx--;
+            }
+
+            Debug_Walker_Visit( ((struct if_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct if_statement_link*)TempNodePtr)->next_statement_link;
+        }
+        break;
+
+    case ELSE_CONDITION:
+        /* Debug Printout */
+        Debug_Walker_Printout( ELSE_CONDITION );
+
+        /* Add Vertical Line */
+        if(((s_ast_elseCodnition*)NodePtr)->else_statement_link.statement != NULL)
+        {
+            Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+            Debug_Walker_Statistics.VerLine.Idx++;
+        }
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_elseCodnition*)NodePtr)->else_statement_link;
+        while( TempNodePtr != NULL && ((struct else_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            /* Check if this is the last argument */
+            if(((struct else_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            {
+                /* Remove Vertical Line */
+                Debug_Walker_Statistics.VerLine.Idx--;
+            }
+
+            Debug_Walker_Visit( ((struct else_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct else_statement_link*)TempNodePtr)->next_statement_link;
+        }
         break;
 
     case PARAMETER:

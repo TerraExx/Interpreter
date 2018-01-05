@@ -12,21 +12,40 @@ parameter : type_spec variable
 
 compound_statement_main : MAIN  LCURLY ((variable_declaration)*)? statement_list RCURLY
 
-statement_list : statement | statement SEMI statement_list 
+statement_list : statement SEMI | statement SEMI statement_list 
 
-statement : assignment_statement | empty
+statement : assignment_statement | compound_statement_call | return | if_statement | empty
+
+if_statement: IF LPAREN expr RPAREN LCURLY statement_list RCURLY (ELSE LCRULY statement_list RCURLY)?
+
+compound_statement_call : variable LPAREN argument_list RPAREN
+
+argument_list : argument | (argument COMMA argument_list)
+
+argument : variable | INTEGER_CONST | REAL_CONST
 
 assignment_statement : variable ASSIGN expr
 
-expr : term ((PLUS | MINUS) term)*
+return : RETURN (variable | INTEGER_CONST | REAL_CONST)
+
+expr : term ((arithmetich_L1 | logical) term)*
 
 term : factor ((MUL | INTEGER_DIV) factor)*
+
+arithmetich_L1 : PLUS | MINUS
+
+logical:  LT_EQUAL
+		| LESS_THAN 
+		| GT_EQUAL 
+		| GREATER_THAN
+		| EQUAL 
 
 factor :   PLUS factor
          | MINUS factor
          | INTEGER_CONST
          | REAL_CONST
          | LPAREN expr RPAREN
+         | compound_statement_call
 	     | variable
 
 variable : ID

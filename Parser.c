@@ -12,6 +12,8 @@
 
 /* Prototypes */
 void* Parser_Expression(s_parser_parser* Parser);
+void* Parser_Statement(s_parser_parser* Parser);
+s_ast_compoundStatementCall* Parser_Compound_Call(s_parser_parser* Parser);
 
 /* Function Implementation */
 
@@ -19,6 +21,11 @@ void Parser_Init(s_parser_parser* Parser, s_lexer_lexer* Lexer)
 {
 	Parser->lexer = Lexer;
 	Parser->current_token = Lexer_GetNextToken(Lexer);
+}
+
+void Parser_LineError(s_parser_parser* Parser)
+{
+    System_Print("Error on line %d:\n", Parser->lexer->line);
 }
 
 s_lexer_token Parser_Eat(s_parser_parser* Parser, e_lexer_token_type Type)
@@ -31,7 +38,8 @@ s_lexer_token Parser_Eat(s_parser_parser* Parser, e_lexer_token_type Type)
 	}
 	else
 	{
-	    System_Print("Parser Error: Wrong Token Type -> Current_Token: %d, Expected: %d.\n", Parser->current_token.type, Type);
+	    Parser_LineError( Parser );
+	    System_Print("Parser Error: Wrong Token Type -> Current_Token: %s, Expected: %s.\n", TokenTypeString[Parser->current_token.type], TokenTypeString[Type]);
 		exit(1);
 	}
 
@@ -46,6 +54,8 @@ s_ast_type* Parser_Type_Spec(s_parser_parser* Parser)
 
   /* Init */
   Type_SpecNode->info.type = TYPE;
+  Type_SpecNode->info.line = Parser->lexer->line;
+
   Type_SpecNode->token = Parser->current_token;
 
   if(Parser->current_token.type == UINT8)
@@ -78,7 +88,8 @@ s_ast_type* Parser_Type_Spec(s_parser_parser* Parser)
   }
   else
   {
-      System_Print("Parser Error: \nLine %d:\nUnknown type: %s\n", Parser->current_token.line, Parser->current_token.value.string);
+      Parser_LineError( Parser );
+      System_Print("Unknown type: %s\n", Parser->current_token.value.string);
       exit(1);
   }
 
@@ -93,6 +104,8 @@ s_ast_variable* Parser_Variable(s_parser_parser* Parser)
 
   /* Init */
   VariableNode->info.type = VAR;
+  VariableNode->info.line = Parser->lexer->line;
+
   VariableNode->token = Parser->current_token;
 
   Parser_Eat(Parser, ID);
@@ -171,14 +184,23 @@ void* Parser_Factor(s_parser_parser* Parser)
     {
         VariableNode = (s_ast_variable*) malloc(sizeof(s_ast_variable));
 
-        /* Init */
-        VariableNode->info.type = VAR;
+        if( Lexer_Peek( (uint8_t*)"(", Parser->lexer ) == TRUE )
+        {
+            /* Compound Statement Call */
+            Factor = Parser_Compound_Call( Parser );
+        }
+        else
+        {
+            /* Init */
+            VariableNode->info.type = VAR;
 
-        VariableNode->token = Parser->current_token;
+            VariableNode->token = Parser->current_token;
 
-        Parser_Eat( Parser, ID );
+            Parser_Eat( Parser, ID );
 
-        Factor = VariableNode;
+            Factor = VariableNode;
+        }
+
     }
 
     return Factor;
@@ -232,7 +254,13 @@ void* Parser_Expression(s_parser_parser* Parser)
     /* Parse Term */
     Expression = Parser_Term( Parser );
 
-    while(Parser->current_token.type == PLUS || Parser->current_token.type == MINUS)
+    while(Parser->current_token.type == PLUS          ||
+          Parser->current_token.type == MINUS         ||
+          Parser->current_token.type == LESS_THAN     ||
+          Parser->current_token.type == LT_EQUAL      ||
+          Parser->current_token.type == GREATER_THAN  ||
+          Parser->current_token.type == GT_EQUAL      ||
+          Parser->current_token.type == EQUAL )
     {
         BinaryOpNode = (s_ast_binary*) malloc(sizeof(s_ast_binary));
 
@@ -247,6 +275,26 @@ void* Parser_Expression(s_parser_parser* Parser)
         else if(Parser->current_token.type == MINUS)
         {
             Parser_Eat( Parser, MINUS );
+        }
+        else if(Parser->current_token.type == LESS_THAN)
+        {
+            Parser_Eat( Parser, LESS_THAN );
+        }
+        else if(Parser->current_token.type == LT_EQUAL)
+        {
+            Parser_Eat( Parser, LT_EQUAL );
+        }
+        else if(Parser->current_token.type == GREATER_THAN)
+        {
+            Parser_Eat( Parser, GREATER_THAN );
+        }
+        else if(Parser->current_token.type == GT_EQUAL)
+        {
+            Parser_Eat( Parser, GT_EQUAL );
+        }
+        else if(Parser->current_token.type == EQUAL)
+        {
+            Parser_Eat( Parser, EQUAL );
         }
 
         BinaryOpNode->leftOperand = Expression;
@@ -268,6 +316,7 @@ s_ast_var_declaration* Parser_Declaration(s_parser_parser* Parser)
 
   /* Init */
   DeclarationNode->info.type = VAR_DECL;
+  DeclarationNode->info.line = Parser->lexer->line;
 
   DeclarationNode->type = NULL;
 
@@ -317,6 +366,350 @@ s_ast_var_declaration* Parser_Declaration(s_parser_parser* Parser)
   return DeclarationNode;
 }
 
+void Parser_Statement_list(s_parser_parser* Parser, s_ast_statement_link* StatementLinkPtr)
+{
+    struct statement_link*       TempPtr;
+
+    /* Parse Statements */
+    while(Parser->current_token.type != RCURLY)
+    {
+        StatementLinkPtr->statement = Parser_Statement( Parser );
+
+        StatementLinkPtr->next_statement_link = (struct statement_link*) malloc(sizeof(struct statement_link));
+
+        /* Init new link */
+        TempPtr = StatementLinkPtr;
+
+        StatementLinkPtr = StatementLinkPtr->next_statement_link;
+
+        StatementLinkPtr->statement = NULL;
+        StatementLinkPtr->next_statement_link = NULL;
+        StatementLinkPtr->perv_statement_link = TempPtr;
+    }
+
+    /* Free/DeInit the last allocated link */
+    if(StatementLinkPtr->perv_statement_link != NULL)
+    {
+        TempPtr = StatementLinkPtr->perv_statement_link;
+        TempPtr->next_statement_link = NULL;
+        free(StatementLinkPtr);
+    }
+}
+
+s_ast_compoundReturnStatement* Parser_Compound_Return_Statement(s_parser_parser* Parser)
+{
+    s_ast_compoundReturnStatement* ReturnStatementNode;
+
+    ReturnStatementNode = (s_ast_compoundReturnStatement*)malloc(sizeof(s_ast_compoundReturnStatement));
+
+    /* Init */
+    ReturnStatementNode->info.type = RETURN_STATEMENT;
+    ReturnStatementNode->info.line = Parser->lexer->line;
+
+    ReturnStatementNode->value = NULL;
+
+    /* Eat Return token */
+    Parser_Eat( Parser, RETURN );
+
+    /* Parse Factor */
+    ReturnStatementNode->value = Parser_Factor(Parser);
+
+    return ReturnStatementNode;
+}
+
+s_ast_compoundCallArg* Parser_Compound_Call_Argument(s_parser_parser* Parser)
+{
+    s_ast_compoundCallArg* ArgumentNode;
+
+    ArgumentNode = (s_ast_compoundCallArg*) malloc(sizeof(s_ast_compoundCallArg));
+
+    /* Init */
+    ArgumentNode->info.type = ARGUMENT;
+    ArgumentNode->info.line = Parser->lexer->line;
+
+    if( Parser->current_token.type == ID )
+    {
+        /* Parse Variable */
+        ArgumentNode->argument = Parser_Variable( Parser );
+    }
+    else if( Parser->current_token.type == INTEGER_CONST )
+    {
+        /* Parse Variable */
+        ArgumentNode->argument = Parser_Factor( Parser );
+    }
+    else if( Parser->current_token.type == REAL_CONST )
+    {
+        /* Parse Variable */
+        ArgumentNode->argument = Parser_Factor( Parser );
+    }
+
+    return ArgumentNode;
+}
+
+s_ast_compoundStatementCall* Parser_Compound_Call(s_parser_parser* Parser)
+{
+    s_ast_compoundStatementCall*  CompoundCallNode;
+
+    struct argument_link*   ArgLinkPtr;
+    struct argument_link*   TempArgPtr;
+
+    CompoundCallNode = (s_ast_compoundStatementCall*)malloc(sizeof(s_ast_compoundStatementCall));
+
+    /* Init */
+    CompoundCallNode->info.type = COMPOUND_CALL;
+    CompoundCallNode->info.line = Parser->lexer->line;
+
+    CompoundCallNode->argument_link.argument = NULL;
+    CompoundCallNode->argument_link.next_argument_link = NULL;
+    CompoundCallNode->argument_link.perv_argument_link = NULL;
+
+    /* Parse variable (left operand) */
+    CompoundCallNode->cmpStatementName = Parser->current_token;
+    Parser_Eat( Parser, ID );
+
+    /* Parse Arguments */
+    Parser_Eat( Parser, LPAREN );
+
+    ArgLinkPtr = &CompoundCallNode->argument_link;
+
+    for(; Parser->current_token.type != RPAREN ; Parser_Eat(Parser, COMMA))
+    {
+        ArgLinkPtr->argument = Parser_Compound_Call_Argument( Parser );
+
+        ArgLinkPtr->next_argument_link = (struct argument_link*) malloc(sizeof(struct argument_link));
+
+        /* Init new link */
+        TempArgPtr = ArgLinkPtr;
+
+        ArgLinkPtr = ArgLinkPtr->next_argument_link;
+
+        ArgLinkPtr->argument = NULL;
+        ArgLinkPtr->next_argument_link = NULL;
+        ArgLinkPtr->perv_argument_link = TempArgPtr;
+
+        if(Parser->current_token.type == RPAREN)
+        {
+            break;
+        }
+    }
+
+    /* Free/DeInit the last allocated link */
+    if(ArgLinkPtr->perv_argument_link != NULL)
+    {
+        TempArgPtr = ArgLinkPtr->perv_argument_link;
+        TempArgPtr->next_argument_link = NULL;
+        free(ArgLinkPtr);
+    }
+
+    Parser_Eat( Parser, RPAREN );
+
+    return CompoundCallNode;
+}
+
+s_ast_assignment* Parser_Assignment_Statement(s_parser_parser* Parser)
+{
+    s_ast_assignment* AssignmentStatementNode;
+
+    AssignmentStatementNode = (s_ast_assignment*)malloc(sizeof(s_ast_assignment));
+
+    /* Init */
+    AssignmentStatementNode->info.type = ASSIGNMENT;
+    AssignmentStatementNode->info.line = Parser->lexer->line;
+
+    AssignmentStatementNode->variable = NULL;
+
+    /* Parse variable (left operand) */
+    AssignmentStatementNode->variable = Parser_Variable( Parser );
+
+    Parser_Eat( Parser, ASSIGN );
+
+    /* Parse right side */
+    if( Parser->current_token.type == ID && Lexer_Peek( (uint8_t*)"(", Parser->lexer ) == TRUE )
+    {
+        /* Compound Statement Call */
+        AssignmentStatementNode->expression = Parser_Compound_Call( Parser );
+    }
+    else
+    {
+        /* Expression */
+        AssignmentStatementNode->expression = Parser_Expression( Parser );
+    }
+
+    return AssignmentStatementNode;
+}
+
+s_ast_elseCodnition* Parser_Else_Condition(s_parser_parser* Parser)
+{
+    s_ast_elseCodnition* ElseConditionNode;
+
+    struct else_statement_link*       StatementLinkPtr;
+    struct else_statement_link*       TempPtr;
+
+    ElseConditionNode = (s_ast_elseCodnition*)malloc(sizeof(s_ast_elseCodnition));
+
+    /* Init */
+    ElseConditionNode->info.type = ELSE_CONDITION;
+    ElseConditionNode->info.line = Parser->lexer->line;
+
+    ElseConditionNode->else_statement_link.statement = NULL;
+    ElseConditionNode->else_statement_link.next_statement_link = NULL;
+    ElseConditionNode->else_statement_link.perv_statement_link = NULL;
+
+    /* Parser Else Statement Block */
+    Parser_Eat( Parser, LCURLY);
+
+    StatementLinkPtr = &ElseConditionNode->else_statement_link;
+
+    /* Parse Statements */
+    while(Parser->current_token.type != RCURLY)
+    {
+        StatementLinkPtr->statement = Parser_Statement( Parser );
+
+        StatementLinkPtr->next_statement_link = (struct else_statement_link*) malloc(sizeof(struct else_statement_link));
+
+        /* Init new link */
+        TempPtr = StatementLinkPtr;
+
+        StatementLinkPtr = StatementLinkPtr->next_statement_link;
+
+        StatementLinkPtr->statement = NULL;
+        StatementLinkPtr->next_statement_link = NULL;
+        StatementLinkPtr->perv_statement_link = TempPtr;
+    }
+
+    /* Free/DeInit the last allocated link */
+    if(StatementLinkPtr->perv_statement_link != NULL)
+    {
+        TempPtr = StatementLinkPtr->perv_statement_link;
+        TempPtr->next_statement_link = NULL;
+        free(StatementLinkPtr);
+    }
+
+    Parser_Eat( Parser, RCURLY);
+
+
+    return ElseConditionNode;
+}
+
+s_ast_ifCondition* Parser_If_Condition(s_parser_parser* Parser)
+{
+    s_ast_ifCondition* IfConditionNode;
+
+    struct if_statement_link*       StatementLinkPtr;
+    struct if_statement_link*       TempPtr;
+
+    IfConditionNode = (s_ast_ifCondition*)malloc(sizeof(s_ast_ifCondition));
+
+    /* Init */
+    IfConditionNode->info.type = IF_CONDITION;
+    IfConditionNode->info.line = Parser->lexer->line;
+
+    IfConditionNode->condition = NULL;
+
+    IfConditionNode->if_statement_link.statement = NULL;
+    IfConditionNode->if_statement_link.next_statement_link = NULL;
+    IfConditionNode->if_statement_link.perv_statement_link = NULL;
+
+    /* Parser If Statement Block */
+    Parser_Eat( Parser, IF );
+
+    Parser_Eat( Parser, LPAREN );
+
+    IfConditionNode->condition = Parser_Expression( Parser );
+
+    Parser_Eat( Parser, RPAREN );
+    Parser_Eat( Parser, LCURLY);
+
+    StatementLinkPtr = &IfConditionNode->if_statement_link;
+
+    /* Parse Statements */
+    while(Parser->current_token.type != RCURLY)
+    {
+        StatementLinkPtr->statement = Parser_Statement( Parser );
+
+        StatementLinkPtr->next_statement_link = (struct if_statement_link*) malloc(sizeof(struct if_statement_link));
+
+        /* Init new link */
+        TempPtr = StatementLinkPtr;
+
+        StatementLinkPtr = StatementLinkPtr->next_statement_link;
+
+        StatementLinkPtr->statement = NULL;
+        StatementLinkPtr->next_statement_link = NULL;
+        StatementLinkPtr->perv_statement_link = TempPtr;
+    }
+
+    /* Free/DeInit the last allocated link */
+    if(StatementLinkPtr->perv_statement_link != NULL)
+    {
+        TempPtr = StatementLinkPtr->perv_statement_link;
+        TempPtr->next_statement_link = NULL;
+        free(StatementLinkPtr);
+    }
+
+    Parser_Eat( Parser, RCURLY);
+
+    return IfConditionNode;
+}
+
+s_ast_ifStatement* Parser_If_Statement(s_parser_parser* Parser)
+{
+    s_ast_ifStatement* IfStatementNode;
+
+    struct if_condition_link*   IfCondLinkPtr;
+    struct if_condition_link*   TempIfCondPtr;
+
+    IfStatementNode = (s_ast_ifStatement*)malloc(sizeof(s_ast_ifStatement));
+
+    /* Init */
+    IfStatementNode->info.type = IF_STATEMENT;
+    IfStatementNode->info.line = Parser->lexer->line;
+
+    IfStatementNode->if_condition_link.ifCondition = NULL;
+    IfStatementNode->if_condition_link.next_ifCondition_link = NULL;
+    IfStatementNode->if_condition_link.perv_ifCondition_link = NULL;
+
+    IfStatementNode->elseCondition = NULL;
+
+    IfCondLinkPtr = NULL;
+    TempIfCondPtr = NULL;
+
+    /* Parse If Statement */
+    IfStatementNode->if_condition_link.ifCondition = Parser_If_Condition( Parser );
+
+    IfCondLinkPtr = &IfStatementNode->if_condition_link;
+    TempIfCondPtr = IfCondLinkPtr;
+
+    /* Parse Else and Else If Statements */
+    while( Parser->current_token.type == ELSE )
+    {
+        Parser_Eat( Parser, ELSE );
+
+        if( Parser->current_token.type == IF )
+        {
+            IfCondLinkPtr->next_ifCondition_link = (struct if_condition_link*)malloc(sizeof(struct if_condition_link));
+            IfCondLinkPtr = IfCondLinkPtr->next_ifCondition_link;
+
+            /* Init new link */
+            IfCondLinkPtr->ifCondition = NULL;
+            IfCondLinkPtr->next_ifCondition_link = NULL;
+            IfCondLinkPtr->perv_ifCondition_link = TempIfCondPtr;
+
+            /* Parser an else if statement */
+            IfCondLinkPtr->ifCondition = Parser_If_Condition( Parser );
+
+            TempIfCondPtr = IfCondLinkPtr;
+        }
+        else if( Parser->current_token.type == LCURLY )
+        {
+            /* Parser an else statement */
+            IfStatementNode->elseCondition = Parser_Else_Condition( Parser );
+        }
+    }
+
+    return IfStatementNode;
+}
+
 void* Parser_Statement(s_parser_parser* Parser)
 {
     void*   Statement;
@@ -325,23 +718,32 @@ void* Parser_Statement(s_parser_parser* Parser)
     Statement = NULL;
 
     /* Check statement type */
-    if(Parser->current_token.type == ID)
+    if( Parser->current_token.type == ID )
     {
-        /* Assigment Statement */
-        Statement = malloc(sizeof(s_ast_assignment));
-
-        /* Init */
-        ((s_ast_assignment*)Statement)->info.type = ASSIGNMENT;
-
-        /* Parse variable (left operand) */
-        ((s_ast_assignment*)Statement)->variable = Parser_Variable( Parser );
-
-        Parser_Eat( Parser, ASSIGN );
-
-        /* Parse right side (expression) */
-        ((s_ast_assignment*)Statement)->expression = Parser_Expression( Parser );
+        if( Lexer_Peek( (uint8_t*)"=", Parser->lexer ) == TRUE )
+        {
+            /* Assignment Statement */
+            Statement = Parser_Assignment_Statement( Parser );
+        }
+        else if( Lexer_Peek( (uint8_t*)"(", Parser->lexer ) == TRUE )
+        {
+            /* Compound Statement Call */
+            Statement = Parser_Compound_Call( Parser );
+        }
 
         Parser_Eat( Parser, SEMICOL );
+    }
+    else if( Parser->current_token.type == RETURN )
+    {
+        /* Return Statement */
+        Statement = Parser_Compound_Return_Statement( Parser );
+
+        Parser_Eat( Parser, SEMICOL );
+    }
+    else if( Parser->current_token.type == IF )
+    {
+        /* if Statement */
+        Statement = Parser_If_Statement( Parser );
     }
 
     return Statement;
@@ -361,6 +763,7 @@ s_ast_compound_main* Parser_Compound_Statement_Main(s_parser_parser* Parser)
 
 	/* Init */
 	CompoundMainNode->info.type = COMPOUND_MAIN;
+	CompoundMainNode->info.line = Parser->lexer->line;
 
 	CompoundMainNode->main_var_decl_link.var_declaration = NULL;
 	CompoundMainNode->main_var_decl_link.next_var_decl_link = NULL;
@@ -443,6 +846,7 @@ s_ast_parameter* Parser_Compound_Parameter(s_parser_parser* Parser)
 
     /* Init */
     CompoundParameterNode->info.type = PARAMETER;
+    CompoundParameterNode->info.line = Parser->lexer->line;
 
     /* Parse Type */
     CompoundParameterNode->type = Parser_Type_Spec( Parser );
@@ -461,6 +865,7 @@ s_ast_compound_return* Parser_Compound_Return(s_parser_parser* Parser)
 
     /* Init */
     CompoundReturnNode->info.type = COMPOUND_RETURN;
+    CompoundReturnNode->info.line = Parser->lexer->line;
 
     /* Parse Return Type */
     CompoundReturnNode->type = Parser_Type_Spec( Parser );
@@ -485,6 +890,7 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
 
     /* Init */
     CoumpoundStatementNode->info.type = COMPOUND;
+    CoumpoundStatementNode->info.line = Parser->lexer->line;
 
     CoumpoundStatementNode->return_type = NULL;
 
@@ -621,6 +1027,7 @@ s_ast_program* Parser_Parse(s_parser_parser* Parser)
 
 	/* Init */
 	ProgramNode->info.type = PROGRAM;
+	ProgramNode->info.line = 0;
 
 	ProgramNode->global_var_decl_link.var_declaration = NULL;
 	ProgramNode->global_var_decl_link.next_var_decl_link = NULL;

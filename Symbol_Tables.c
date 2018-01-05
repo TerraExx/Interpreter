@@ -203,7 +203,7 @@ s_symbol_symbol* Symbol_Table_GetSymbol( uint8_t* name, s_symbol_symbol_table* s
     /* Init */
     Symbol = NULL;
 
-    /* Try and find the Variable in local/current scope */
+    /* Try and find the symbol in local/current scope */
     /* Hash the name */
     Index = Symbol_Table_Hash( name, symbol_table->hash_info.hashSize );
 
@@ -264,7 +264,7 @@ s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t*
     switch(category)
     {
     case SYMBOL_BUILTIN_TYPE:
-        /* Fill built-in specific info */
+        /* Init Built-In Type */
         Symbol->type = (e_symbol_builtin_types*) malloc(sizeof(e_symbol_builtin_types));
 
         if(strcmp((const char*)name, (const char*)"int8") == 0)
@@ -295,18 +295,29 @@ s_symbol_symbol* Symbol_Table_CreateSymbol( e_symbol_category category, uint8_t*
         {
             *(e_symbol_builtin_types*)(Symbol->type) = BIT_FLOAT;
         }
+
+        Symbol->value = NULL;
+        Symbol->info = NULL;
         break;
     case SYMBOL_VARIABLE:
-        /* Fill variable specific info */
+        /* Init Variable */
         Symbol->type = type;
         Symbol->value = NULL;
+        Symbol->info = NULL;
         break;
     case SYMBOL_COMPOUND:
-        /* Fill compound specific info */
+        /* Init Compound */
         Symbol->type = type;
         Symbol->value = NULL;
+
+        /* Fill compound specific info */
+        Symbol->info = malloc(sizeof(s_symbol_compoundStatementInfo));
+
+        ((s_symbol_compoundStatementInfo*)Symbol->info)->parameterNum = 0;
+        ((s_symbol_compoundStatementInfo*)Symbol->info)->compoundNode = NULL;
         break;
     case SYMBOL_PARAMETER:
+        /* Init Parameter */
         Symbol->type = type;
         Symbol->value = NULL;
         break;
@@ -328,7 +339,7 @@ void Symbol_Table_MemAllocVar(s_symbol_symbol_table* symbol_table)
         TempSymbolPtr = *((s_symbol_symbol**)((uint32_t*)symbol_table->symbolHash + Idx));
         if( TempSymbolPtr != NULL )
         {
-            if( TempSymbolPtr->category == SYMBOL_VARIABLE )
+            if( TempSymbolPtr->category != SYMBOL_BUILTIN_TYPE )
             {
                 TempSymbolPtr->value = calloc(1,sizeof(uint32_t));
             }

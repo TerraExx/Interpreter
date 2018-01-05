@@ -3,10 +3,13 @@
 
 #include <ctype.h>
 
-uint8_t KeyWordString[KEY_WORD_NUM][KEY_WORD_MAX_LENGHT] =
+uint8_t KeyWordString[KEYWORD_NUM][KEY_WORD_MAX_LENGHT] =
 {
         "variables",
 		"main",
+		"return",
+		"if",
+		"else",
         "int8",
         "int16",
         "int32",
@@ -16,11 +19,53 @@ uint8_t KeyWordString[KEY_WORD_NUM][KEY_WORD_MAX_LENGHT] =
         "float"
 };
 
+uint8_t TokenTypeString[TOKEN_TYPE_NUM][KEY_WORD_MAX_LENGHT] =
+{
+        /* Key Words */
+        "VARIABLES",
+        "MAIN",
+        "RETURN",
+        "IF",
+        "ELSE",
+        /* Key Words - Built-in Types */
+        "INT8",
+        "INT16",
+        "INT32",
+        "UINT8",
+        "UINT16",
+        "UINT32",
+        "FLOAT",
+
+        /* Other Tokens */
+        "ELSE_IF",
+        "INTEGER_CONST",
+        "REAL_CONST",
+        "ID",
+        "LPAREN",
+        "RPAREN",
+        "LCURLY",
+        "RCURLY",
+        "ASSIGN",
+        "COMMA",
+        "SEMICOL",
+        "PLUS",
+        "MINUS",
+        "MUL",
+        "DIV",
+        "LESS_THAN",
+        "LT_EQUAL",
+        "GREATER_THAN",
+        "GT_EQUAL",
+        "EQUAL",
+};
+
+s_lexer_keyword  KeyWordArray[KEYWORD_NUM];
+
 void Lexer_InitKeywords(void)
 {
     uint8_t Idx;
 
-    for(Idx = 0; Idx < KEY_WORD_NUM; Idx++)
+    for(Idx = 0; Idx < KEYWORD_NUM; Idx++)
     {
         strcpy((char*)KeyWordArray[Idx].string,(const char*)KeyWordString[Idx]);
         KeyWordArray[Idx].keyword_token.type = (e_lexer_token_type) Idx;
@@ -34,6 +79,7 @@ void Lexer_Init(s_lexer_lexer* Lexer, uint8_t* text)
 
 	Lexer->current_Pos = 0;
 	Lexer->current_Char = text;
+	Lexer->line = 1;
 
 	Lexer_InitKeywords();
 }
@@ -74,6 +120,33 @@ s_lexer_token Lexer_Number(s_lexer_lexer* Lexer)
     return Token;
 }
 
+uint8_t Lexer_Peek( uint8_t* tokenText, s_lexer_lexer* Lexer )
+{
+    uint8_t     Ret;
+    uint8_t*    PeekChar;
+    uint16_t    PeekPos;
+
+    /* Init */
+    Ret = FALSE;
+    PeekPos = Lexer->current_Pos;
+    PeekChar = Lexer->current_Char;
+
+    /* Skip white space */
+    while((*PeekChar == ' ') && (PeekPos != strlen((const char*)Lexer->text)))
+    {
+        PeekPos++;
+        PeekChar++;
+    }
+
+    /* Compare tokenText with actual text */
+    if( *PeekChar == *tokenText )
+    {
+        Ret = TRUE;
+    }
+
+    return Ret;
+}
+
 s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
 {
     s_lexer_token   Token;
@@ -93,7 +166,7 @@ s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
     }
 
 
-    for(Idx = 0; Idx < KEY_WORD_NUM; Idx++)
+    for(Idx = 0; Idx < KEYWORD_NUM; Idx++)
     {
         if(!strcmp((const char*)String,(const char*)KeyWordArray[Idx].string))
         {
@@ -101,7 +174,7 @@ s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
         }
     }
 
-    if(Idx == KEY_WORD_NUM)
+    if(Idx == KEYWORD_NUM)
     {
         Token.type = ID;
         strcpy((char*)Token.value.string,(const char*)String);
@@ -116,15 +189,13 @@ s_lexer_token Lexer_Id(s_lexer_lexer* Lexer)
 
 s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
 {
-    static  uint16_t    CurrentLine = 1;
-
 	s_lexer_token	    Token;
 
 	while(Lexer->current_Char != NULL)
 	{
         if(*Lexer->current_Char == '\n')
         {
-            CurrentLine++;
+            Lexer->line++;
             Lexer_Advance(Lexer);
             continue;
         }
@@ -147,6 +218,15 @@ s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
 	        break;
 	    }
 
+        if(*Lexer->current_Char == '=' && *(Lexer->current_Char+1) == '=')
+        {
+            Token.type = EQUAL;
+            strcpy(Token.value.string, (const char*)"==");
+            Lexer_Advance(Lexer);
+            Lexer_Advance(Lexer);
+            break;
+        }
+
 	    if(*Lexer->current_Char == '=')
 	    {
 	        Token.type = ASSIGN;
@@ -167,6 +247,40 @@ s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
         {
             Token.type = MINUS;
             strcpy(Token.value.string, (const char*)"-");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '<' && *(Lexer->current_Char+1) == '=')
+        {
+            Token.type = LT_EQUAL;
+            strcpy(Token.value.string, (const char*)"<=");
+            Lexer_Advance(Lexer);
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '<')
+        {
+            Token.type = LESS_THAN;
+            strcpy(Token.value.string, (const char*)"<");
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '>' && *(Lexer->current_Char+1) == '=')
+        {
+            Token.type = GT_EQUAL;
+            strcpy(Token.value.string, (const char*)">=");
+            Lexer_Advance(Lexer);
+            Lexer_Advance(Lexer);
+            break;
+        }
+
+        if(*Lexer->current_Char == '>')
+        {
+            Token.type = GREATER_THAN;
+            strcpy(Token.value.string, (const char*)">");
             Lexer_Advance(Lexer);
             break;
         }
@@ -241,7 +355,7 @@ s_lexer_token Lexer_GetNextToken(s_lexer_lexer* Lexer)
 	}
 
 	/* Record Token Line */
-	Token.line = CurrentLine;
+	Token.line = Lexer->line;
 
 	return Token;
 }

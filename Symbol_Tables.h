@@ -33,10 +33,18 @@ typedef enum
 
 typedef struct
 {
+    uint8_t parameterNum;
+    void*   compoundNode;
+    void*   returnNode;
+} s_symbol_compoundStatementInfo;
+
+typedef struct
+{
     e_symbol_category   category;
     uint8_t             name[MAX_SYMBOL_NAME_LENGHT];
     void*               type;
     void*               value;
+    void*               info;
 } s_symbol_symbol;
 
 typedef struct

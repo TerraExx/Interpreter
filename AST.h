@@ -24,6 +24,12 @@ typedef enum
 	COMPOUND,
 	COMPOUND_RETURN,
 	PARAMETER,
+	COMPOUND_CALL,
+	ARGUMENT,
+	RETURN_STATEMENT,
+	IF_STATEMENT,
+	IF_CONDITION,
+	ELSE_CONDITION,
 	PROGRAM
 }e_ast_node_type;
 
@@ -33,6 +39,7 @@ typedef enum
 typedef struct
 {
 	e_ast_node_type    type;
+	uint16_t           line;
 } s_ast_node_info;
 
 /* No Operation */
@@ -102,6 +109,90 @@ typedef struct
 	} var_link;
 
 } s_ast_var_declaration;
+
+/* Statement linked list link */
+typedef struct s_ast_statement_link
+{
+    void*                         statement;
+    struct s_ast_statement_link*  next_statement_link;
+    struct s_ast_statement_link*  perv_statement_link;
+} s_ast_statement_link;
+
+/* If Condition */
+typedef struct
+{
+    s_ast_node_info info;
+
+    void*   condition;
+
+    /* If Statement linked list */
+    struct if_statement_link
+    {
+        void*                      statement;
+        struct if_statement_link*  next_statement_link;
+        struct if_statement_link*  perv_statement_link;
+    } if_statement_link;
+} s_ast_ifCondition;
+
+/* Else Condition */
+typedef struct
+{
+    s_ast_node_info info;
+
+    /* Else Statement linked list */
+    struct else_statement_link
+    {
+        void*                        statement;
+        struct else_statement_link*  next_statement_link;
+        struct else_statement_link*  perv_statement_link;
+    } else_statement_link;
+} s_ast_elseCodnition;
+
+/* If Statement */
+typedef struct
+{
+    s_ast_node_info info;
+
+    /* if Condition linked list */
+    struct if_condition_link
+    {
+        s_ast_ifCondition*         ifCondition;
+        struct if_condition_link*  next_ifCondition_link;
+        struct if_condition_link*  perv_ifCondition_link;
+    } if_condition_link;
+
+    s_ast_elseCodnition* elseCondition;
+} s_ast_ifStatement;
+
+/* Compound Return Statement */
+typedef struct
+{
+    s_ast_node_info info;
+    void* value;
+} s_ast_compoundReturnStatement;
+
+/* Compound Call Argument */
+typedef struct
+{
+    s_ast_node_info info;
+    void* argument;
+} s_ast_compoundCallArg;
+
+/* Compound Statement Call */
+typedef struct
+{
+    s_ast_node_info info;
+    s_lexer_token   cmpStatementName;
+
+    /* Compound Statement Call Argument linked list */
+    struct argument_link
+    {
+        s_ast_compoundCallArg* argument;
+        struct argument_link*  next_argument_link;
+        struct argument_link*  perv_argument_link;
+    } argument_link;
+
+} s_ast_compoundStatementCall;
 
 /* Compound Return */
 typedef struct
