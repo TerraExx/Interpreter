@@ -176,6 +176,14 @@ void Debug_Walker_Printout()
     case NO_OP:
         /* Not Implemented Yet */
         break;
+
+    case TEST_WAIT_TIMEOUT:
+        System_Print("TEST_WAIT_TIMEOUT\n");
+        break;
+
+    case WHILE_STATEMENT:
+        System_Print("WHILE_STATEMENT\n");
+        break;
     }
 }
 
@@ -299,7 +307,10 @@ void Debug_Walker_Visit( void* NodePtr )
         }
 
         /* Compound Return Type Visit */
-        Debug_Walker_Visit( ((s_ast_compound*)NodePtr)->return_type );
+        if( ((s_ast_compound*)NodePtr)->return_type != NULL )
+        {
+            Debug_Walker_Visit( ((s_ast_compound*)NodePtr)->return_type );
+        }
 
         /* Parameter Visit */
         TempNodePtr = (void*)&((s_ast_compound*)NodePtr)->parameter_link;
@@ -385,7 +396,10 @@ void Debug_Walker_Visit( void* NodePtr )
         Debug_Walker_Printout( RETURN );
 
         /* Visit Return Value */
-        Debug_Walker_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        if( ((s_ast_compoundReturnStatement*)NodePtr)->value != NULL )
+        {
+            Debug_Walker_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        }
         break;
 
     case FOR_STATEMENT:
@@ -596,6 +610,42 @@ void Debug_Walker_Visit( void* NodePtr )
     case VAR:
         /* Debug Printout */
         Debug_Walker_Printout( VAR );
+        break;
+
+    case TEST_WAIT_TIMEOUT:
+        /* Debug Printout */
+        Debug_Walker_Printout( TEST_WAIT_TIMEOUT );
+
+        /* Visit Value */
+        Debug_Walker_Visit( ((s_ast_testWaitForTimeout*)NodePtr)->value );
+        break;
+
+    case WHILE_STATEMENT:
+        /* Debug Printout */
+        Debug_Walker_Printout( TEST_WAIT_TIMEOUT );
+
+        /* Add Vertical Line */
+        Debug_Walker_Statistics.VerLine.Levels[Debug_Walker_Statistics.VerLine.Idx] = Debug_Walker_Statistics.Level;
+        Debug_Walker_Statistics.VerLine.Idx++;
+
+        /* Visit Value */
+        Debug_Walker_Visit( ((s_ast_whileStatement*)NodePtr)->condition );
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_whileStatement*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            /* Check if this is the last argument */
+            if(((struct s_ast_statement_link*)TempNodePtr)->next_statement_link == NULL)
+            {
+                /* Remove Vertical Line */
+                Debug_Walker_Statistics.VerLine.Idx--;
+            }
+
+            Debug_Walker_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+        }
         break;
 
     default:

@@ -11,6 +11,10 @@
 #include "Symbol_Tables.h"
 #include "Interpreter.h"
 
+#include <time.h>
+
+struct timespec Time_1, Time_2;
+
 s_interpreter_funcCallLink*  Interpreter_FuncCallStack;
 
 void Interpreter_PushFuncCall( s_symbol_symbol_table* symbolTable )
@@ -202,8 +206,12 @@ uint32_t Interpreter_Visit( void* NodePtr )
         /* Get compound symbol */
         TempSymbolPtr = Interpreter_FuncCallStack->compoundSymbol;
 
-        /* Set compound value */
-        *(uint32_t*)TempSymbolPtr->value = Interpreter_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        if( ((s_ast_compoundReturnStatement*)NodePtr)->value != NULL )
+        {
+            /* Set compound value */
+            *(uint32_t*)TempSymbolPtr->value = Interpreter_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+
+        }
 
         /* Set Return Executed */
         ((s_symbol_compoundStatementInfo*)TempSymbolPtr->info)->returnExecuted = TRUE;
@@ -404,6 +412,54 @@ uint32_t Interpreter_Visit( void* NodePtr )
         /* Return Variable Value */
         TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)((s_ast_variable*)NodePtr)->token.value.string, Interpreter_FuncCallStack->symbolTable );
         Return = *(uint32_t*)TempSymbolPtr->value;
+        break;
+
+    case TEST_WAIT_TIMEOUT:
+        /* Sleep for value ms */
+        Return = Interpreter_Visit( ((s_ast_testWaitForTimeout*)NodePtr)->value );
+
+        Time_1.tv_sec = Return/1000;
+        Time_1.tv_nsec = (Return%1000)*1000*1000;
+
+        nanosleep( &Time_1, &Time_2 );
+        break;
+
+    case WHILE_STATEMENT:
+        /* Execute For */
+        if( ((s_ast_whileStatement*)NodePtr)->condition != NULL )
+        {
+            while( Interpreter_Visit( ((s_ast_whileStatement*)NodePtr)->condition ) )
+            {
+                /* Visit Statements */
+                TempNodePtr = (void*)&((s_ast_whileStatement*)NodePtr)->statement_link;
+                while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+                {
+                    Interpreter_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+                    if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->returnExecuted == TRUE  )
+                    {
+                        /* Return Statement was executed. Stop function execution and return. */
+                        return Return;
+                    }
+                    else if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+                    {
+                        /* Break Statement was executed. Stop loop execution and break. */
+                        break;
+                    }
+
+                    TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+                }
+
+                if( ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted == TRUE )
+                {
+                    /* Break Statement was executed. Stop loop execution and break. */
+                    break;
+                }
+            }
+
+            /* ReInit Break Executed Flag */
+            ((s_symbol_compoundStatementInfo*)Interpreter_FuncCallStack->compoundSymbol->info)->breakExecuted = FALSE;
+        }
         break;
 
     default:

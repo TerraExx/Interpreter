@@ -21,7 +21,9 @@ typedef enum
 	IF,
 	ELSE,
 	FOR,
+	WHILE,
 	BREAK,
+	TW_TIMEOUT,
 	/* Key Words - Built-in Types */
 	INT8,
 	INT16,
@@ -30,6 +32,7 @@ typedef enum
 	UINT16,
 	UINT32,
 	FLOAT,
+	VOID,
 	KEYWORD_NUM,
 
 	/* Other Tokens */

@@ -31,7 +31,9 @@ typedef enum
 	IF_CONDITION,
 	ELSE_CONDITION,
 	FOR_STATEMENT,
+	WHILE_STATEMENT,
 	BREAK_STATEMENT,
+	TEST_WAIT_TIMEOUT,
 	PROGRAM
 }e_ast_node_type;
 
@@ -120,11 +122,30 @@ typedef struct s_ast_statement_link
     struct s_ast_statement_link*  perv_statement_link;
 } s_ast_statement_link;
 
+/* Test Wait For Timeout */
+typedef struct
+{
+    s_ast_node_info info;
+
+    void* value;
+} s_ast_testWaitForTimeout;
+
 /* Break Statement */
 typedef struct
 {
     s_ast_node_info info;
 } s_ast_breakStatement;
+
+/* While Statement */
+typedef struct
+{
+    s_ast_node_info info;
+
+    void*   condition;
+
+    /* For Statement linked list */
+    s_ast_statement_link statement_link;
+} s_ast_whileStatement;
 
 /* For Statement */
 typedef struct

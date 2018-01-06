@@ -11,14 +11,17 @@ uint8_t KeyWordString[KEYWORD_NUM][KEY_WORD_MAX_LENGHT] =
 		"if",
 		"else",
 		"for",
+		"while",
 		"break",
+		"TestWaitForTimeout",
         "int8",
         "int16",
         "int32",
         "uint8",
         "uint16",
         "uint32",
-        "float"
+        "float",
+        "void"
 };
 
 uint8_t TokenTypeString[TOKEN_TYPE_NUM][KEY_WORD_MAX_LENGHT] =
@@ -30,7 +33,9 @@ uint8_t TokenTypeString[TOKEN_TYPE_NUM][KEY_WORD_MAX_LENGHT] =
         "IF",
         "ELSE",
         "FOR",
+        "WHILE",
         "BREAK",
+        "TW_TIMEOUT",
         /* Key Words - Built-in Types */
         "INT8",
         "INT16",
@@ -39,6 +44,7 @@ uint8_t TokenTypeString[TOKEN_TYPE_NUM][KEY_WORD_MAX_LENGHT] =
         "UINT16",
         "UINT32",
         "FLOAT",
+        "VOID",
 
         /* Other Tokens */
         "ELSE_IF",

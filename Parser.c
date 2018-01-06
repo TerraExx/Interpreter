@@ -86,6 +86,10 @@ s_ast_type* Parser_Type_Spec(s_parser_parser* Parser)
   {
       Parser_Eat(Parser, FLOAT);
   }
+  else if(Parser->current_token.type == VOID)
+  {
+      Parser_Eat(Parser, VOID);
+  }
   else
   {
       Parser_LineError( Parser );
@@ -742,6 +746,62 @@ s_ast_forStatement* Parser_For_Statement(s_parser_parser* Parser)
     return ForStatementNode;
 }
 
+s_ast_whileStatement* Parser_While_Statement(s_parser_parser* Parser)
+{
+    s_ast_whileStatement* WhileNode;
+
+    WhileNode = (s_ast_whileStatement*)malloc(sizeof(s_ast_whileStatement));
+
+    /* Init */
+    WhileNode->info.type = WHILE_STATEMENT;
+    WhileNode->info.line = Parser->lexer->line;
+
+    WhileNode->condition = NULL;
+
+    WhileNode->statement_link.statement = NULL;
+    WhileNode->statement_link.next_statement_link = NULL;
+    WhileNode->statement_link.perv_statement_link= NULL;
+
+    /* Parse while statement */
+    Parser_Eat( Parser, WHILE );
+    Parser_Eat( Parser, LPAREN );
+
+    WhileNode->condition = Parser_Expression( Parser );
+
+    Parser_Eat( Parser, RPAREN );
+    Parser_Eat( Parser, LCURLY );
+
+    /* Parse For Statement Block */
+    Parser_Statement_List( Parser, &WhileNode->statement_link );
+
+    Parser_Eat( Parser, RCURLY );
+
+    return WhileNode;
+}
+
+s_ast_testWaitForTimeout* Parser_Test_Wait_For_Timeout(s_parser_parser* Parser)
+{
+    s_ast_testWaitForTimeout* TWTimeoutNode;
+
+    TWTimeoutNode = (s_ast_testWaitForTimeout*)malloc(sizeof(s_ast_testWaitForTimeout));
+
+    /* Init */
+    TWTimeoutNode->info.type = TEST_WAIT_TIMEOUT;
+    TWTimeoutNode->info.line = Parser->lexer->line;
+
+    TWTimeoutNode->value = NULL;
+
+    /* Parse Test Wait For Timeout Call */
+    Parser_Eat( Parser, TW_TIMEOUT );
+    Parser_Eat( Parser, LPAREN );
+
+    TWTimeoutNode->value = Parser_Expression(Parser);
+
+    Parser_Eat( Parser, RPAREN );
+
+    return TWTimeoutNode;
+}
+
 void* Parser_Statement(s_parser_parser* Parser)
 {
     void*   Statement;
@@ -782,10 +842,22 @@ void* Parser_Statement(s_parser_parser* Parser)
         /* for Statement */
         Statement = Parser_For_Statement( Parser );
     }
+    else if( Parser->current_token.type == WHILE )
+    {
+        /* while statement */
+        Statement = Parser_While_Statement( Parser );
+    }
     else if( Parser->current_token.type == BREAK )
     {
         /* Break Statement */
         Statement = Parser_Compound_Break_Statement( Parser );
+
+        Parser_Eat( Parser, SEMICOL );
+    }
+    else if( Parser->current_token.type == TW_TIMEOUT )
+    {
+        /* Test Wait For Timeout */
+        Statement = Parser_Test_Wait_For_Timeout( Parser );
 
         Parser_Eat( Parser, SEMICOL );
     }
@@ -921,7 +993,10 @@ s_ast_compound* Parser_Compound_Statement(s_parser_parser* Parser)
     CoumpoundStatementNode->statement_link.perv_statement_link = NULL;
 
     /* Parse Return Type */
-    CoumpoundStatementNode->return_type = Parser_Compound_Return( Parser );
+    if( Parser->current_token.type != ID )
+    {
+        CoumpoundStatementNode->return_type = Parser_Compound_Return( Parser );
+    }
 
     /* Parse Name */
     CoumpoundStatementNode->name = Parser->current_token;

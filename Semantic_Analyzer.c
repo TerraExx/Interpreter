@@ -13,6 +13,8 @@
 struct s_semantic_analyzer_statistics
 {
     s_symbol_symbol_table*   currentTable;
+    s_symbol_symbol*         currentCompoundSymbol;
+    uint8_t                  insideLoop;
 } Semantic_Analyzer_Statistics;
 
 void Semantic_Analyzer_LineError( void* NodePtr )
@@ -86,7 +88,7 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
     case COMPOUND_MAIN:
         /* Create and insert Compound Symbol into global scope */
-        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)"uint8", Symbol_Table_HeadLink.symbolTable);
+        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)"void", Symbol_Table_HeadLink.symbolTable );
 
         Symbol_Table_InsertSymbol
                 (
@@ -96,6 +98,7 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
         /* Create new Symbol Table */
         Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)"main", 128);
+        Semantic_Analyzer_Statistics.currentCompoundSymbol = Symbol_Table_GetSymbol( (uint8_t*)"main", Symbol_Table_HeadLink.symbolTable );
 
         /* Add the new Symbol Table to the linked list */
         TempSymbolTableLinkPtr = &Symbol_Table_HeadLink;
@@ -140,14 +143,22 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
     case COMPOUND:
         /* Lookup the compound return type (in global scope) */
-        TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)((s_ast_compound*)NodePtr)->return_type->type->token.value.string, Symbol_Table_HeadLink.symbolTable);
-
-        if(TempSymbolPtr == NULL)
+        if( ((s_ast_compound*)NodePtr)->return_type != NULL )
         {
-            /* Type is not declared as built-in type in global scope */
-            Semantic_Analyzer_LineError( NodePtr );
-            System_Print("Semantic Error: Return Type %s not found in global scope.\n", (uint8_t*)((s_ast_compound*)NodePtr)->return_type->type->token.value.string);
-            exit(1);
+            TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)((s_ast_compound*)NodePtr)->return_type->type->token.value.string, Symbol_Table_HeadLink.symbolTable);
+
+            if(TempSymbolPtr == NULL)
+            {
+                /* Type is not declared as built-in type in global scope */
+                Semantic_Analyzer_LineError( NodePtr );
+                System_Print("Semantic Error: Return Type %s not found in global scope.\n", (uint8_t*)((s_ast_compound*)NodePtr)->return_type->type->token.value.string);
+                exit(1);
+            }
+        }
+        else
+        {
+            /* Get void symbol */
+            TempSymbolPtr = Symbol_Table_GetSymbol( (uint8_t*)"void", Symbol_Table_HeadLink.symbolTable);
         }
 
         /* Create and insert Compound Symbol into global scope */
@@ -159,6 +170,7 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
         /* Create new Symbol Table */
         Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*)((s_ast_compound*)NodePtr)->name.value.string, 128);
+        Semantic_Analyzer_Statistics.currentCompoundSymbol = Symbol_Table_GetSymbol( (uint8_t*)Semantic_Analyzer_Statistics.currentTable->scope, Symbol_Table_HeadLink.symbolTable );
 
         /* Add the new Symbol Table to the linked list */
         TempSymbolTableLinkPtr = &Symbol_Table_HeadLink;
@@ -269,7 +281,10 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
     case RETURN_STATEMENT:
         /* Visit Return Value */
-        Semantic_Analyzer_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        if( ((s_ast_compoundReturnStatement*)NodePtr)->value != NULL )
+        {
+            Semantic_Analyzer_Visit( ((s_ast_compoundReturnStatement*)NodePtr)->value );
+        }
         break;
 
     case IF_STATEMENT:
@@ -290,6 +305,9 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         break;
 
     case FOR_STATEMENT:
+        /* Set inside loop flag */
+        Semantic_Analyzer_Statistics.insideLoop = TRUE;
+
         /* Visit Init Statement */
         if( ((s_ast_forStatement*)NodePtr)->initStatement != NULL )
         {
@@ -316,10 +334,19 @@ void Semantic_Analyzer_Visit( void* NodePtr )
 
             TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
         }
+
+        /* Clear inside loop flag */
+        Semantic_Analyzer_Statistics.insideLoop = FALSE;
         break;
 
     case BREAK_STATEMENT:
-        /* No visit necessary */
+        /* Check if it's inside of a loop */
+        if( Semantic_Analyzer_Statistics.insideLoop == FALSE )
+        {
+            Semantic_Analyzer_LineError( NodePtr );
+            System_Print("Semantic Error: break used outside of a loop.\n");
+            exit(1);
+        }
         break;
 
     case IF_CONDITION:
@@ -409,6 +436,31 @@ void Semantic_Analyzer_Visit( void* NodePtr )
         }
         break;
 
+    case TEST_WAIT_TIMEOUT:
+        /* Visit Value */
+        Semantic_Analyzer_Visit( ((s_ast_testWaitForTimeout*)NodePtr)->value );
+        break;
+
+    case WHILE_STATEMENT:
+        /* Set inside loop flag */
+        Semantic_Analyzer_Statistics.insideLoop = TRUE;
+
+        /* Visit Value */
+        Semantic_Analyzer_Visit( ((s_ast_whileStatement*)NodePtr)->condition );
+
+        /* Visit Statements */
+        TempNodePtr = (void*)&((s_ast_whileStatement*)NodePtr)->statement_link;
+        while( TempNodePtr != NULL && ((struct s_ast_statement_link*)TempNodePtr)->statement != NULL )
+        {
+            Semantic_Analyzer_Visit( ((struct s_ast_statement_link*)TempNodePtr)->statement );
+
+            TempNodePtr = (void*)((struct s_ast_statement_link*)TempNodePtr)->next_statement_link;
+        }
+
+        /* Clear inside loop flag */
+        Semantic_Analyzer_Statistics.insideLoop = FALSE;
+        break;
+
     default:
         System_Print("Node Type Unknown.\n");
         exit(1);
@@ -420,6 +472,10 @@ void Semantic_Analyzer_Walkthrought( s_ast_program* ProgramNode )
 {
     /* Debug printout */
     System_Print(" \n \nCreating Symbol Tables:\n");
+
+    /* Init */
+    Semantic_Analyzer_Statistics.currentTable = NULL;
+    Semantic_Analyzer_Statistics.insideLoop = FALSE;
 
     /* Create Global System Table */
     Semantic_Analyzer_Statistics.currentTable = Symbol_Table_CreateTable( (uint8_t*) "global", 128);
@@ -437,7 +493,7 @@ void Semantic_Analyzer_Walkthrought( s_ast_program* ProgramNode )
     Symbol_Table_InsertSymbol( Symbol_Table_CreateSymbol( SYMBOL_BUILTIN_TYPE, (uint8_t*) "uint16", NULL), Semantic_Analyzer_Statistics.currentTable );
     Symbol_Table_InsertSymbol( Symbol_Table_CreateSymbol( SYMBOL_BUILTIN_TYPE, (uint8_t*) "uint32", NULL), Semantic_Analyzer_Statistics.currentTable );
     Symbol_Table_InsertSymbol( Symbol_Table_CreateSymbol( SYMBOL_BUILTIN_TYPE, (uint8_t*) "float", NULL), Semantic_Analyzer_Statistics.currentTable );
-
+    Symbol_Table_InsertSymbol( Symbol_Table_CreateSymbol( SYMBOL_BUILTIN_TYPE, (uint8_t*) "void", NULL), Semantic_Analyzer_Statistics.currentTable );
 
     /* Visit all Program AST nodes */
     Semantic_Analyzer_Visit( ProgramNode );

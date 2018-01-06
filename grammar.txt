@@ -14,7 +14,19 @@ compound_statement_main : MAIN  LCURLY ((variable_declaration)*)? statement_list
 
 statement_list : statement SEMI | statement SEMI statement_list 
 
-statement : assignment_statement | compound_statement_call | return | if_statement | for_statement | empty
+statement :   assignment_statement 
+			| compound_statement_call 
+			| return_void 
+			| return_typed 
+			| if_statement 
+			| for_statement
+			| while_statement
+			| test_wait_timeout 
+			| empty
+
+test_wait_timeout : TW_TIMEOUT LPAREN (variable | INTEGER_CONST) RPAREN
+
+while_statement : WHILE LPAREN expr RPAREN LCURLY loop_statement_list RCURLY
 
 for_statement : FOR LPAREN (assignment_statement | compound_statement_call)? SEMI expr SEMI (assignment_statement | compound_statement_call)? RPAREN LCURLY statement_list RCURLY
 
@@ -30,7 +42,9 @@ argument : variable | INTEGER_CONST | REAL_CONST
 
 assignment_statement : variable ASSIGN expr
 
-return : RETURN (variable | INTEGER_CONST | REAL_CONST)
+return_typed : RETURN (variable | INTEGER_CONST | REAL_CONST)
+
+return_void : RETURN
 
 expr : term ((arithmetich_L1 | logical) term)*
 
